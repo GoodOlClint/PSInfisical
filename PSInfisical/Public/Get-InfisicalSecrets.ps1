@@ -1,0 +1,156 @@
+# Get-InfisicalSecrets.ps1
+# Retrieves all secrets in a given path from the Infisical API.
+# Called by: User directly. Supports pipeline output.
+# Dependencies: InfisicalSession class, InfisicalSecret class, Invoke-InfisicalApi, Get-InfisicalSession
+
+function Get-InfisicalSecrets {
+    <#
+    .SYNOPSIS
+        Retrieves all secrets from an Infisical path.
+
+    .DESCRIPTION
+        Fetches all secrets from the specified Infisical environment and path.
+        Returns InfisicalSecret objects that are pipeline-friendly, emitting each
+        secret individually. Use -AsHashtable for direct variable injection.
+
+    .PARAMETER Environment
+        The environment slug. Overrides the session default if specified.
+
+    .PARAMETER SecretPath
+        The Infisical folder path. Defaults to "/".
+
+    .PARAMETER ProjectId
+        The project/workspace ID. Overrides the session default if specified.
+
+    .PARAMETER Recursive
+        Include secrets from sub-paths.
+
+    .PARAMETER Filter
+        A scriptblock for client-side filtering, e.g. { $_.Name -like "DB_*" }.
+
+    .PARAMETER AsHashtable
+        Return a hashtable of Name=Value (plaintext strings) instead of objects.
+
+    .EXAMPLE
+        Get-InfisicalSecrets
+
+        Returns all secrets in the default environment and root path.
+
+    .EXAMPLE
+        Get-InfisicalSecrets -Environment 'staging' -SecretPath '/database'
+
+        Returns all secrets in the staging environment under the /database path.
+
+    .EXAMPLE
+        Get-InfisicalSecrets -Filter { $_.Name -like 'DB_*' } -AsHashtable
+
+        Returns a hashtable of secrets whose names start with "DB_".
+
+    .OUTPUTS
+        [InfisicalSecret[]] by default, or [hashtable] when -AsHashtable is specified.
+
+    .NOTES
+        Each secret is emitted individually to the pipeline for streaming processing.
+        The -Filter parameter runs client-side after all secrets are retrieved.
+
+    .LINK
+        Get-InfisicalSecret
+    .LINK
+        Remove-InfisicalSecret
+    #>
+    [CmdletBinding()]
+    [OutputType([InfisicalSecret[]], [hashtable])]
+    param(
+        [Parameter()]
+        [string] $Environment,
+
+        [Parameter()]
+        [string] $SecretPath = '/',
+
+        [Parameter()]
+        [string] $ProjectId,
+
+        [Parameter()]
+        [switch] $Recursive,
+
+        [Parameter()]
+        [scriptblock] $Filter,
+
+        [Parameter()]
+        [switch] $AsHashtable
+    )
+
+    $session = Get-InfisicalSession
+
+    $resolvedEnvironment = if ([string]::IsNullOrEmpty($Environment)) { $session.DefaultEnvironment } else { $Environment }
+    $resolvedProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }
+
+    $queryParams = @{
+        workspaceId = $resolvedProjectId
+        environment = $resolvedEnvironment
+        secretPath  = $SecretPath
+    }
+
+    if ($Recursive.IsPresent) {
+        $queryParams['recursive'] = 'true'
+    }
+
+    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v3/secrets/raw' -QueryParameters $queryParams -Session $session
+
+    if ($null -eq $response -or $null -eq $response.secrets) {
+        if ($AsHashtable.IsPresent) {
+            return @{}
+        }
+        return
+    }
+
+    $secrets = [System.Collections.Generic.List[InfisicalSecret]]::new()
+
+    foreach ($secretData in $response.secrets) {
+        $secret = [InfisicalSecret]::new()
+        $secret.Name = $secretData.secretKey
+        $secret.Environment = $resolvedEnvironment
+        $secret.Path = if ($secretData.PSObject.Properties['secretPath'] -and $secretData.secretPath) { $secretData.secretPath } else { $SecretPath }
+        $secret.ProjectId = $resolvedProjectId
+        $secret.Version = if ($null -ne $secretData.version) { [int]$secretData.version } else { 0 }
+        $secret.Comment = if ($secretData.secretComment) { $secretData.secretComment } else { '' }
+        $secret.Id = if ($secretData.id) { $secretData.id } elseif ($secretData._id) { $secretData._id } else { '' }
+
+        $parsedDate = [datetime]::MinValue
+        if ($secretData.createdAt -and [datetime]::TryParse($secretData.createdAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
+            $secret.CreatedAt = $parsedDate
+        }
+        if ($secretData.updatedAt -and [datetime]::TryParse($secretData.updatedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
+            $secret.UpdatedAt = $parsedDate
+        }
+
+        if ($null -ne $secretData.secretValue) {
+            $secureValue = [System.Security.SecureString]::new()
+            foreach ($char in $secretData.secretValue.ToString().ToCharArray()) {
+                $secureValue.AppendChar($char)
+            }
+            $secureValue.MakeReadOnly()
+            $secret.Value = $secureValue
+        }
+
+        $secrets.Add($secret)
+    }
+
+    # Apply client-side filter if specified
+    if ($null -ne $Filter) {
+        $secrets = [System.Collections.Generic.List[InfisicalSecret]]($secrets | Where-Object -FilterScript $Filter)
+    }
+
+    if ($AsHashtable.IsPresent) {
+        $result = @{}
+        foreach ($s in $secrets) {
+            $result[$s.Name] = $s.GetValue()
+        }
+        return $result
+    }
+
+    # Emit objects individually for pipeline support
+    foreach ($s in $secrets) {
+        $s
+    }
+}
