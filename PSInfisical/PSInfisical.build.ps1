@@ -89,12 +89,20 @@ task Test Build, {
 task Analyze Build, {
     Write-Build Yellow 'Running PSScriptAnalyzer...'
 
-    $analysisResults = Invoke-ScriptAnalyzer -Path $moduleSrcDir -Recurse -Settings @{
-        Rules = @{
-            PSAvoidUsingWriteHost                      = @{ Enable = $true }
-            PSAvoidUsingPlainTextForPassword            = @{ Enable = $true }
-            PSUseShouldProcessForStateChangingFunctions = @{ Enable = $true }
-            PSAvoidUsingConvertToSecureStringWithPlainText = @{ Enable = $true }
+    # Analyze only production code — tests intentionally use patterns like
+    # ConvertTo-SecureString with plaintext that are not appropriate in production.
+    $productionPaths = @('Classes', 'Private', 'Public', 'PSInfisical.psm1', 'PSInfisical.psd1') |
+        ForEach-Object { Join-Path -Path $moduleSrcDir -ChildPath $_ } |
+        Where-Object { Test-Path $_ }
+
+    $analysisResults = $productionPaths | ForEach-Object {
+        Invoke-ScriptAnalyzer -Path $_ -Recurse -Settings @{
+            Rules = @{
+                PSAvoidUsingWriteHost                         = @{ Enable = $true }
+                PSAvoidUsingPlainTextForPassword               = @{ Enable = $true }
+                PSUseShouldProcessForStateChangingFunctions    = @{ Enable = $true }
+                PSAvoidUsingConvertToSecureStringWithPlainText = @{ Enable = $true }
+            }
         }
     }
 
