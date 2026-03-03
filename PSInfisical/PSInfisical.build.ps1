@@ -41,6 +41,7 @@ task Build {
         'Public'
         'Private'
         'Classes'
+        'PSInfisical.Extension'
     )
 
     foreach ($item in $itemsToCopy) {
@@ -91,7 +92,7 @@ task Analyze Build, {
 
     # Analyze only production code — tests intentionally use patterns like
     # ConvertTo-SecureString with plaintext that are not appropriate in production.
-    $productionPaths = @('Classes', 'Private', 'Public', 'PSInfisical.psm1', 'PSInfisical.psd1') |
+    $productionPaths = @('Classes', 'Private', 'Public', 'PSInfisical.Extension', 'PSInfisical.psm1', 'PSInfisical.psd1') |
         ForEach-Object { Join-Path -Path $moduleSrcDir -ChildPath $_ } |
         Where-Object { Test-Path $_ }
 

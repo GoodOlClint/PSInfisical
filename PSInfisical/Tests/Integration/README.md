@@ -129,6 +129,7 @@ end-to-end over real HTTP.
 | `Invoke-InfisicalApi.Integration.Tests.ps1` | 429 retry, 404, 401, 403, 5xx error paths |
 | `Connect-Infisical.Integration.Tests.ps1` | UniversalAuth, Token, AccessToken, invalid credentials |
 | `Secrets.Integration.Tests.ps1` | Full CRUD lifecycle, versioning, pipeline support |
+| `PSInfisical.Extension.Integration.Tests.ps1` | SecretManagement vault extension CRUD, Get-SecretInfo, Test-SecretVault |
 
 ## Troubleshooting
 

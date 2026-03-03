@@ -22,7 +22,7 @@
     Copyright         = '(c) PSInfisical Contributors. All rights reserved.'
 
     # Description of the functionality provided by this module
-    Description       = 'A PowerShell module providing an idiomatic interface to the Infisical secrets management API. Supports universal auth, token-based auth, and CRUD operations on secrets with SecureString handling.'
+    Description       = 'A PowerShell module providing an idiomatic interface to the Infisical secrets management API. Supports universal auth, token-based auth, CRUD operations on secrets with SecureString handling, and Microsoft.PowerShell.SecretManagement vault extension.'
 
     # Minimum version of the PowerShell engine required by this module
     PowerShellVersion = '5.1'
@@ -48,11 +48,17 @@
     # Aliases to export from this module
     AliasesToExport    = @()
 
-    # Scripts to run before importing the module — exposes class types globally
-    ScriptsToProcess  = @(
-        'Classes/InfisicalSession.ps1'
-        'Classes/InfisicalSecret.ps1'
-    )
+    # Class types (InfisicalSession, InfisicalSecret) are dot-sourced inside
+    # the RootModule (PSInfisical.psm1). Use 'using module PSInfisical' in
+    # scripts that need direct access to these types.
+    # NOTE: ScriptsToProcess is intentionally empty — listing class files
+    # here breaks SecretManagement's internal module loading in Register-SecretVault.
+    ScriptsToProcess  = @()
+
+    # SecretManagement vault extension — required by Register-SecretVault.
+    # The extension's psm1 guards against circular import by checking
+    # if PSInfisical is already loaded before importing the parent module.
+    NestedModules     = @('.\PSInfisical.Extension')
 
     # Required modules
     RequiredModules    = @()
@@ -68,3 +74,4 @@
     }
 
 }
+

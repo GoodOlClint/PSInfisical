@@ -20,7 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SecureString-first design for all secret values
 - Automatic token refresh for Universal Auth sessions
 - Exponential backoff retry on rate limiting (429)
-- Full Pester 5 unit test suite
+- `PSInfisical.Extension` nested module — Microsoft.PowerShell.SecretManagement vault extension
+- `Get-Secret`, `Set-Secret`, `Remove-Secret`, `Get-SecretInfo`, `Test-SecretVault` via SecretManagement
+- Session caching per vault name for efficient multi-vault scenarios
+- Full Pester 5 unit test suite (including extension tests)
+- Integration tests for extension functions
 - PSScriptAnalyzer compliance
 - InvokeBuild build script
 - Comprehensive documentation with examples

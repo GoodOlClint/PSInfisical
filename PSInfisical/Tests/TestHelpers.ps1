@@ -17,7 +17,7 @@ function New-TestSecureString {
 }
 
 # Creates a valid mock InfisicalSession for use in tests.
-# Classes are globally available via ScriptsToProcess in the manifest.
+# Classes are available via type accelerators registered in the psm1.
 function New-MockSession {
     [OutputType([InfisicalSession])]
     param(

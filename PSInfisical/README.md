@@ -131,6 +131,59 @@ $env:DATABASE_URL = $dbUrl
 Get-InfisicalSecrets -Filter { $_.Name -like 'TEMP_*' } | Remove-InfisicalSecret -Confirm:$false
 ```
 
+## SecretManagement Integration
+
+PSInfisical includes a [Microsoft.PowerShell.SecretManagement](https://learn.microsoft.com/en-us/powershell/utility-modules/secretmanagement/overview) vault extension. This lets you use standard `Get-Secret` / `Set-Secret` commands to access Infisical secrets alongside other vault providers.
+
+### Prerequisites
+
+```powershell
+Install-Module -Name Microsoft.PowerShell.SecretManagement -Scope CurrentUser
+```
+
+### Register the Vault
+
+```powershell
+Register-SecretVault -Name 'Infisical' -ModuleName 'PSInfisical' -VaultParameters @{
+    ApiUrl       = 'https://app.infisical.com'   # Optional, defaults to cloud
+    ClientId     = 'your-client-id'               # UniversalAuth
+    ClientSecret = 'your-client-secret'           # UniversalAuth
+    ProjectId    = 'your-project-id'              # Required
+    Environment  = 'prod'                         # Optional, defaults to 'prod'
+    SecretPath   = '/'                            # Optional, defaults to '/'
+}
+```
+
+All three authentication methods are supported via `VaultParameters`:
+- **UniversalAuth**: `ClientId` + `ClientSecret`
+- **Static Token**: `Token`
+- **Pre-obtained JWT**: `AccessToken`
+
+### Usage
+
+```powershell
+# Verify vault connectivity
+Test-SecretVault -Name 'Infisical'
+
+# Get a secret (returns SecureString)
+$secret = Get-Secret -Name 'DATABASE_URL' -Vault 'Infisical'
+
+# Get a secret as plaintext
+$plaintext = Get-Secret -Name 'DATABASE_URL' -Vault 'Infisical' -AsPlainText
+
+# Create or update a secret
+Set-Secret -Name 'NEW_KEY' -Secret 'my-value' -Vault 'Infisical'
+
+# List all secrets
+Get-SecretInfo -Vault 'Infisical'
+
+# List secrets matching a pattern
+Get-SecretInfo -Filter 'DB_*' -Vault 'Infisical'
+
+# Remove a secret
+Remove-Secret -Name 'OLD_KEY' -Vault 'Infisical'
+```
+
 ## SecureString Guidance
 
 PSInfisical stores all secret values as `SecureString` by default. This prevents accidental exposure in logs, transcripts, and debug output.
