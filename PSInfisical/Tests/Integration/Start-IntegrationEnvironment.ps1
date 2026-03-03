@@ -63,7 +63,13 @@ $envFile = Join-Path -Path $composeDir -ChildPath '.env'
 $envExample = Join-Path -Path $composeDir -ChildPath '.env.example'
 
 if (-not (Test-Path -Path $envFile)) {
-    throw "Integration test .env file not found at:`n  $envFile`n`nCopy the example and fill in values:`n  cp $envExample $envFile"
+    if (Test-Path -Path $envExample) {
+        Write-Host "  .env not found — copying from .env.example (default values)..." -ForegroundColor Yellow
+        Copy-Item -Path $envExample -Destination $envFile
+    }
+    else {
+        throw "Integration test .env file not found at:`n  $envFile`n`nNo .env.example found either at:`n  $envExample"
+    }
 }
 
 $envVars = Read-EnvFile -Path $envFile
