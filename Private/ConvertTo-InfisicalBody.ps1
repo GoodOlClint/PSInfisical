@@ -1,4 +1,4 @@
-# ConvertTo-InfisicalBody.ps1
+﻿# ConvertTo-InfisicalBody.ps1
 # Builds request body hashtables consistently for Infisical API calls.
 # Ensures workspaceId, environment, and secretPath are always included.
 # Handles SecureString → plaintext conversion in a single controlled place.

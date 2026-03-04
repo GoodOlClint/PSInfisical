@@ -1,4 +1,4 @@
-# Connect-Infisical.ps1
+﻿# Connect-Infisical.ps1
 # Authenticates to the Infisical API and establishes a module-scoped session.
 # Supports UniversalAuth (machine identity), static Token, and pre-obtained AccessToken.
 # Called by: User directly. First command to run before any secret operations.

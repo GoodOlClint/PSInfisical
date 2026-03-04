@@ -1,4 +1,4 @@
-# Set-InfisicalSecret.ps1
+﻿# Set-InfisicalSecret.ps1
 # Updates an existing secret in Infisical.
 # Called by: User directly.
 # Dependencies: InfisicalSession class, InfisicalSecret class, Invoke-InfisicalApi, Get-InfisicalSession, ConvertTo-InfisicalBody

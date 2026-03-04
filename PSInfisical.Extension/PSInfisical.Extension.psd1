@@ -1,4 +1,4 @@
-@{
+﻿@{
 
     # Script module file associated with this manifest
     RootModule        = 'PSInfisical.Extension.psm1'

@@ -58,6 +58,7 @@ function Get-InfisicalSecrets {
     .LINK
         Remove-InfisicalSecret
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Returns a collection of secrets; plural is intentional')]
     [CmdletBinding()]
     [OutputType([InfisicalSecret[]], [hashtable])]
     param(

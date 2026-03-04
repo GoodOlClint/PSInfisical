@@ -1,4 +1,4 @@
-# New-InfisicalSecret.ps1
+﻿# New-InfisicalSecret.ps1
 # Creates a new secret in Infisical.
 # Called by: User directly.
 # Dependencies: InfisicalSession class, InfisicalSecret class, Invoke-InfisicalApi, Get-InfisicalSession, ConvertTo-InfisicalBody

@@ -1,4 +1,4 @@
-# PSInfisical.psm1
+﻿# PSInfisical.psm1
 # Root module loader for PSInfisical. Dot-sources all class, private, and public
 # function files in the correct order. Manages module-scoped session state.
 # Dependencies: All .ps1 files in Classes/, Private/, and Public/ directories.

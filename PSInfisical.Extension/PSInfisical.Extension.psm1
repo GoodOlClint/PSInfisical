@@ -1,4 +1,4 @@
-# PSInfisical.Extension.psm1
+﻿# PSInfisical.Extension.psm1
 # SecretManagement vault extension for PSInfisical.
 # Provides the 5 required functions: Get-Secret, Set-Secret, Remove-Secret,
 # Get-SecretInfo, Test-SecretVault.
@@ -203,6 +203,7 @@ function Set-Secret {
     .OUTPUTS
         [bool]
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Function signature is defined by SecretManagement')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -249,6 +250,7 @@ function Remove-Secret {
     .OUTPUTS
         [bool]
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Function signature is defined by SecretManagement')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

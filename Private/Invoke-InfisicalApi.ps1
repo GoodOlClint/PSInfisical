@@ -1,4 +1,4 @@
-# Invoke-InfisicalApi.ps1
+﻿# Invoke-InfisicalApi.ps1
 # Core HTTP wrapper for all Infisical API calls. Handles authentication headers,
 # error classification, rate-limit retries, and verbose logging.
 # Called by: All public functions (via Get-InfisicalSession → caller → this function)
@@ -179,6 +179,7 @@ function Invoke-InfisicalApi {
                         }
                         catch {
                             # Could not parse JSON; use generic message
+                            $null = $_
                         }
                     }
                     $errorRecord = [System.Management.Automation.ErrorRecord]::new(
@@ -214,6 +215,7 @@ function Invoke-InfisicalApi {
                         }
                         catch {
                             # Could not parse JSON; use generic message
+                            $null = $_
                         }
                     }
                     $errorRecord = [System.Management.Automation.ErrorRecord]::new(
