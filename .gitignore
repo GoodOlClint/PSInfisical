@@ -1,8 +1,8 @@
 # Integration test secrets — never commit
-PSInfisical/Tests/Integration/.env
+Tests/Integration/.env
 
 # Build output
-PSInfisical/output/
+output/
 
 # Pester test results
-PSInfisical/output/TestResults*.xml
+output/TestResults*.xml

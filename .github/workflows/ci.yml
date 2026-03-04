@@ -43,7 +43,6 @@ jobs:
           Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
 
       - name: Run build pipeline (Clean, Build, Test, Analyze)
-        working-directory: PSInfisical
         run: Invoke-Build
 
       - name: Upload test results
@@ -51,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.os }}-ps${{ matrix.powershell }}
-          path: PSInfisical/output/TestResults.xml
+          path: output/TestResults.xml
 
   integration:
     name: Integration Tests
@@ -75,7 +74,6 @@ jobs:
           Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
 
       - name: Run integration tests
-        working-directory: PSInfisical
         run: Invoke-Build Test-Integration
 
       - name: Upload integration test results
@@ -83,4 +81,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-integration
-          path: PSInfisical/output/TestResults-Integration.xml
+          path: output/TestResults-Integration.xml

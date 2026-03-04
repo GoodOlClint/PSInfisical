@@ -31,8 +31,8 @@ Install-Module -Name PSInfisical -Scope CurrentUser
 ### Manual Install from Repository
 
 ```powershell
-git clone https://github.com/PLACEHOLDER/PSInfisical.git
-Import-Module ./PSInfisical/PSInfisical/PSInfisical.psd1
+git clone https://github.com/GoodOlClint/PSInfisical.git
+Import-Module ./PSInfisical/PSInfisical.psd1
 ```
 
 ## Quick Start

@@ -67,8 +67,8 @@
     PrivateData = @{
         PSData = @{
             Tags         = @('Infisical', 'Secrets', 'SecretManagement', 'API', 'DevOps', 'Security')
-            LicenseUri   = 'https://github.com/PLACEHOLDER/PSInfisical/blob/main/LICENSE'
-            ProjectUri   = 'https://github.com/PLACEHOLDER/PSInfisical'
+            LicenseUri   = 'https://github.com/GoodOlClint/PSInfisical/blob/main/LICENSE'
+            ProjectUri   = 'https://github.com/GoodOlClint/PSInfisical'
             ReleaseNotes = 'Initial release — secrets CRUD, universal auth, token auth, SecureString handling.'
         }
     }

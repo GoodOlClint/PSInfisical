@@ -1,0 +1,47 @@
+name: Publish to PSGallery
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    name: Publish Module
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name InvokeBuild -Scope CurrentUser -Force
+          Install-Module -Name Pester -MinimumVersion 5.0 -Scope CurrentUser -Force
+          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+
+      - name: Validate version matches release tag
+        run: |
+          $manifest = Import-PowerShellDataFile -Path ./PSInfisical.psd1
+          $moduleVersion = $manifest.ModuleVersion
+          $tagVersion = '${{ github.event.release.tag_name }}' -replace '^v', ''
+          if ($moduleVersion -ne $tagVersion) {
+              throw "Module version ($moduleVersion) does not match release tag ($tagVersion). Update PSInfisical.psd1 first."
+          }
+          Write-Host "Version validated: $moduleVersion"
+
+      - name: Build, Test, Analyze, and Publish
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: Invoke-Build Publish
+
+      - name: Upload build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-package
+          path: output/PSInfisical/

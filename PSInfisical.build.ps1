@@ -1,11 +1,12 @@
 # PSInfisical.build.ps1
 # InvokeBuild script for the PSInfisical module.
-# Tasks: Clean, Build, Test, Analyze, Package.
+# Tasks: Clean, Build, Test, Analyze, Package, Publish.
 # Called by: Invoke-Build (user or CI).
 # Dependencies: InvokeBuild, Pester 5.x, PSScriptAnalyzer
 
 param(
-    [string] $ModuleName = 'PSInfisical'
+    [string] $ModuleName = 'PSInfisical',
+    [string] $NuGetApiKey = $env:NUGET_API_KEY
 )
 
 # $BuildRoot is set automatically by Invoke-Build. Fall back to $PSScriptRoot
@@ -15,7 +16,7 @@ if (-not $BuildRoot) {
 }
 
 $OutputDir = Join-Path -Path $BuildRoot -ChildPath 'output'
-# The build script lives inside the module directory, so $BuildRoot IS the source.
+# The build script lives in the repo root alongside the module source.
 $moduleSrcDir = $BuildRoot
 $moduleOutDir = Join-Path -Path $OutputDir -ChildPath $ModuleName
 
@@ -52,6 +53,15 @@ task Build {
         }
         else {
             Write-Build Red "  Missing: $item"
+        }
+    }
+
+    # Copy metadata files for PSGallery publishing
+    foreach ($metaFile in @('LICENSE', 'README.md', 'CHANGELOG.md')) {
+        $metaSource = Join-Path -Path $moduleSrcDir -ChildPath $metaFile
+        if (Test-Path -Path $metaSource) {
+            Copy-Item -Path $metaSource -Destination $moduleOutDir -Force
+            Write-Build Gray "  Copied: $metaFile"
         }
     }
 
@@ -181,6 +191,17 @@ task Test-Integration Build, {
         Write-Build Yellow 'Tearing down integration test environment...'
         & $stopScript
     }
+}
+
+# --- Publish: Publish module to PSGallery ---
+task Publish Build, Test, Analyze, {
+    if (-not $NuGetApiKey) {
+        throw 'NuGetApiKey is required. Pass -NuGetApiKey or set $env:NUGET_API_KEY.'
+    }
+
+    Write-Build Yellow "Publishing $ModuleName to PSGallery..."
+    Publish-Module -Path $moduleOutDir -NuGetApiKey $NuGetApiKey -Verbose
+    Write-Build Green "Published $ModuleName to PSGallery."
 }
 
 # --- Default: Full pipeline ---
