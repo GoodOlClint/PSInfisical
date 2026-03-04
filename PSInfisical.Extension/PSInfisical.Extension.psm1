@@ -64,7 +64,13 @@ function Get-OrCreateSession {
 
     # Validate required parameters
     if ([string]::IsNullOrEmpty($projectId)) {
-        throw "Vault '$VaultName': VaultParameters must include 'ProjectId'."
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.ArgumentException]::new("Vault '$VaultName': VaultParameters must include 'ProjectId'."),
+            'InfisicalVaultMissingProjectId',
+            [System.Management.Automation.ErrorCategory]::InvalidArgument,
+            $VaultName
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     # Build Connect-Infisical parameters
@@ -87,7 +93,13 @@ function Get-OrCreateSession {
         $connectParams['AccessToken'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['AccessToken']
     }
     else {
-        throw "Vault '$VaultName': VaultParameters must include authentication credentials (ClientId+ClientSecret, Token, or AccessToken)."
+        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+            [System.ArgumentException]::new("Vault '$VaultName': VaultParameters must include authentication credentials (ClientId+ClientSecret, Token, or AccessToken)."),
+            'InfisicalVaultMissingCredentials',
+            [System.Management.Automation.ErrorCategory]::InvalidArgument,
+            $VaultName
+        )
+        $PSCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     # Null out the PSInfisical module's session to prevent Connect-Infisical

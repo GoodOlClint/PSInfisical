@@ -99,11 +99,16 @@ function Invoke-InfisicalApi {
                 # Windows PowerShell 5.1 path
                 $webResponse = $caughtException.Response
                 $statusCode = [int]$webResponse.StatusCode
-                $stream = $webResponse.GetResponseStream()
-                if ($null -ne $stream) {
-                    $reader = [System.IO.StreamReader]::new($stream)
-                    $responseBody = $reader.ReadToEnd()
-                    $reader.Dispose()
+                try {
+                    $stream = $webResponse.GetResponseStream()
+                    if ($null -ne $stream) {
+                        $reader = [System.IO.StreamReader]::new($stream)
+                        $responseBody = $reader.ReadToEnd()
+                        $reader.Dispose()
+                    }
+                }
+                finally {
+                    $webResponse.Dispose()
                 }
             }
             elseif ($null -ne $caughtException -and $caughtException.GetType().Name -eq 'HttpResponseException') {
@@ -133,7 +138,7 @@ function Invoke-InfisicalApi {
                         [System.Management.Automation.ErrorCategory]::AuthenticationError,
                         $Endpoint
                     )
-                    throw $errorRecord
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
                 }
                 403 {
                     $errorRecord = [System.Management.Automation.ErrorRecord]::new(
@@ -144,7 +149,7 @@ function Invoke-InfisicalApi {
                         [System.Management.Automation.ErrorCategory]::PermissionDenied,
                         $Endpoint
                     )
-                    throw $errorRecord
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
                 }
                 404 {
                     return $null
@@ -164,7 +169,7 @@ function Invoke-InfisicalApi {
                         [System.Management.Automation.ErrorCategory]::ResourceUnavailable,
                         $Endpoint
                     )
-                    throw $errorRecord
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
                 }
                 { $_ -ge 500 } {
                     # Parse response body for message, but never include raw body
@@ -188,7 +193,7 @@ function Invoke-InfisicalApi {
                         [System.Management.Automation.ErrorCategory]::ConnectionError,
                         $Endpoint
                     )
-                    throw $errorRecord
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
                 }
                 default {
                     # Network or unknown errors
@@ -202,7 +207,7 @@ function Invoke-InfisicalApi {
                             [System.Management.Automation.ErrorCategory]::ConnectionError,
                             $uri
                         )
-                        throw $errorRecord
+                        $PSCmdlet.ThrowTerminatingError($errorRecord)
                     }
                     # Unhandled status codes (e.g. 409 Conflict) — try to surface API message
                     $errorMsg = "Infisical API returned HTTP $statusCode."
@@ -224,7 +229,7 @@ function Invoke-InfisicalApi {
                         [System.Management.Automation.ErrorCategory]::InvalidResult,
                         $Endpoint
                     )
-                    throw $errorRecord
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
                 }
             }
         }

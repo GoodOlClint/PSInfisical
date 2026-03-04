@@ -65,7 +65,7 @@ function Connect-Infisical {
     .LINK
         Get-InfisicalSecret
     #>
-    [CmdletBinding(DefaultParameterSetName = 'UniversalAuth')]
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'UniversalAuth')]
     [OutputType([InfisicalSession])]
     param(
         [Parameter(Mandatory, ParameterSetName = 'UniversalAuth')]
@@ -94,111 +94,117 @@ function Connect-Infisical {
 
         [Parameter()]
         [ValidateNotNullOrEmpty()]
+        [ValidatePattern('^[a-zA-Z0-9_-]+$')]
         [string] $Environment = 'prod',
 
         [Parameter()]
         [switch] $PassThru
     )
 
-    # Dispose SecureStrings from any existing session before replacing
-    if ($null -ne $script:InfisicalSession) {
-        if ($null -ne $script:InfisicalSession.AccessToken) {
-            $script:InfisicalSession.AccessToken.Dispose()
-        }
-        if ($null -ne $script:InfisicalSession.ClientSecret) {
-            $script:InfisicalSession.ClientSecret.Dispose()
-        }
-    }
-    $script:InfisicalSession = $null
-
     # Normalize API URL — remove trailing slash
     $ApiUrl = $ApiUrl.TrimEnd('/')
 
-    Write-Verbose "Connect-Infisical: Connecting to $ApiUrl with auth method '$($PSCmdlet.ParameterSetName)'"
-
-    $session = [InfisicalSession]::new()
-    $session.ApiUrl = $ApiUrl
-    $session.ProjectId = $ProjectId
-    $session.DefaultEnvironment = $Environment
-    $session.AuthMethod = $PSCmdlet.ParameterSetName
-
-    switch ($PSCmdlet.ParameterSetName) {
-        'UniversalAuth' {
-            # Store credentials for automatic re-auth
-            $session.ClientId = $ClientId
-            $session.ClientSecret = $ClientSecret
-
-            # Authenticate via the universal-auth endpoint
-            $clientSecretPlainText = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
-            $authBody = @{
-                clientId     = $ClientId
-                clientSecret = $clientSecretPlainText
+    if ($PSCmdlet.ShouldProcess("Connecting to $ApiUrl with auth method '$($PSCmdlet.ParameterSetName)'")) {
+        # Dispose SecureStrings from any existing session before replacing
+        if ($null -ne $script:InfisicalSession) {
+            if ($null -ne $script:InfisicalSession.AccessToken) {
+                $script:InfisicalSession.AccessToken.Dispose()
             }
-            $bodyJson = $authBody | ConvertTo-Json -Compress
-            $authUri = "$ApiUrl/api/v1/auth/universal-auth/login"
-
-            Write-Verbose "Connect-Infisical: Authenticating via POST $authUri"
-
-            try {
-                $authResponse = Invoke-RestMethod -Uri $authUri -Method POST -Body $bodyJson -ContentType 'application/json' -TimeoutSec 30 -ErrorAction Stop
+            if ($null -ne $script:InfisicalSession.ClientSecret) {
+                $script:InfisicalSession.ClientSecret.Dispose()
             }
-            catch {
-                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                    [System.Security.Authentication.AuthenticationException]::new(
-                        "UniversalAuth login failed: $($_.Exception.Message)"
-                    ),
-                    'InfisicalUniversalAuthFailed',
-                    [System.Management.Automation.ErrorCategory]::AuthenticationError,
-                    $authUri
-                )
-                $PSCmdlet.ThrowTerminatingError($errorRecord)
-            }
-
-            # Validate response contains an access token
-            if (-not $authResponse -or [string]::IsNullOrEmpty($authResponse.accessToken)) {
-                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                    [System.Security.Authentication.AuthenticationException]::new(
-                        'UniversalAuth login succeeded but the response did not contain an access token.'
-                    ),
-                    'InfisicalUniversalAuthNoToken',
-                    [System.Management.Automation.ErrorCategory]::AuthenticationError,
-                    $authUri
-                )
-                $PSCmdlet.ThrowTerminatingError($errorRecord)
-            }
-
-            # Store token as SecureString
-            $secureToken = [System.Security.SecureString]::new()
-            foreach ($char in $authResponse.accessToken.ToCharArray()) {
-                $secureToken.AppendChar($char)
-            }
-            $secureToken.MakeReadOnly()
-            $session.AccessToken = $secureToken
-
-            if ($authResponse.expiresIn) {
-                $session.TokenExpiry = [datetime]::UtcNow.AddSeconds($authResponse.expiresIn)
-            }
-
-            Write-Verbose "Connect-Infisical: UniversalAuth authentication successful."
         }
-        'Token' {
-            $session.AccessToken = $Token
-            # Static tokens do not have a known expiry
-            $session.TokenExpiry = $null
+        $script:InfisicalSession = $null
+
+        Write-Verbose "Connect-Infisical: Connecting to $ApiUrl with auth method '$($PSCmdlet.ParameterSetName)'"
+
+        $session = [InfisicalSession]::new()
+        $session.ApiUrl = $ApiUrl
+        $session.ProjectId = $ProjectId
+        $session.DefaultEnvironment = $Environment
+        $session.AuthMethod = $PSCmdlet.ParameterSetName
+
+        switch ($PSCmdlet.ParameterSetName) {
+            'UniversalAuth' {
+                # Store credentials for automatic re-auth
+                $session.ClientId = $ClientId
+                $session.ClientSecret = $ClientSecret
+
+                # Authenticate via the universal-auth endpoint
+                $clientSecretPlainText = [System.Net.NetworkCredential]::new('', $ClientSecret).Password
+                $authBody = @{
+                    clientId     = $ClientId
+                    clientSecret = $clientSecretPlainText
+                }
+                $bodyJson = $authBody | ConvertTo-Json -Compress
+                $authUri = "$ApiUrl/api/v1/auth/universal-auth/login"
+
+                Write-Verbose "Connect-Infisical: Authenticating via POST $authUri"
+
+                try {
+                    $authResponse = Invoke-RestMethod -Uri $authUri -Method POST -Body $bodyJson -ContentType 'application/json' -TimeoutSec 30 -ErrorAction Stop
+                }
+                catch {
+                    $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                        [System.Security.Authentication.AuthenticationException]::new(
+                            "UniversalAuth login failed: $($_.Exception.Message)"
+                        ),
+                        'InfisicalUniversalAuthFailed',
+                        [System.Management.Automation.ErrorCategory]::AuthenticationError,
+                        $authUri
+                    )
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
+                }
+
+                # Validate response contains an access token
+                if (-not $authResponse -or [string]::IsNullOrEmpty($authResponse.accessToken)) {
+                    $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                        [System.Security.Authentication.AuthenticationException]::new(
+                            'UniversalAuth login succeeded but the response did not contain an access token.'
+                        ),
+                        'InfisicalUniversalAuthNoToken',
+                        [System.Management.Automation.ErrorCategory]::AuthenticationError,
+                        $authUri
+                    )
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
+                }
+
+                # Store token as SecureString
+                $secureToken = [System.Security.SecureString]::new()
+                foreach ($char in $authResponse.accessToken.ToCharArray()) {
+                    $secureToken.AppendChar($char)
+                }
+                $secureToken.MakeReadOnly()
+                $session.AccessToken = $secureToken
+
+                if ($authResponse.expiresIn) {
+                    $session.TokenExpiry = [datetime]::UtcNow.AddSeconds($authResponse.expiresIn)
+                }
+
+                # Clear auth response to reduce plaintext token exposure window
+                $authResponse = $null
+
+                Write-Verbose "Connect-Infisical: UniversalAuth authentication successful."
+            }
+            'Token' {
+                $session.AccessToken = $Token
+                # Static tokens do not have a known expiry
+                $session.TokenExpiry = $null
+            }
+            'AccessToken' {
+                $session.AccessToken = $AccessToken
+                # Pre-obtained JWTs may expire, but we don't know when without decoding
+                $session.TokenExpiry = $null
+            }
         }
-        'AccessToken' {
-            $session.AccessToken = $AccessToken
-            # Pre-obtained JWTs may expire, but we don't know when without decoding
-            $session.TokenExpiry = $null
+
+        $session.UpdateConnectionStatus()
+        $script:InfisicalSession = $session
+
+        Write-Verbose "Connect-Infisical: Session established. Connected=$($session.Connected)"
+
+        if ($PassThru.IsPresent) {
+            return $session
         }
-    }
-
-    $session.UpdateConnectionStatus()
-    $script:InfisicalSession = $session
-
-    Write-Verbose "Connect-Infisical: Session established. Connected=$($session.Connected)"
-
-    if ($PassThru.IsPresent) {
-        return $session
     }
 }

@@ -191,6 +191,23 @@ $env:DATABASE_URL = $dbUrl
 Get-InfisicalSecrets -Filter { $_.Name -like 'TEMP_*' } | Remove-InfisicalSecret -Confirm:$false
 ```
 
+### Set default parameters for your session
+
+Use `$PSDefaultParameterValues` to avoid repeating the same `-Environment` or `-SecretPath` on every call:
+
+```powershell
+$PSDefaultParameterValues['*-Infisical*:Environment'] = 'staging'
+$PSDefaultParameterValues['*-Infisical*:SecretPath']   = '/backend'
+```
+
+### Idempotent secret creation in CI/CD
+
+Use `-Force` with `New-InfisicalSecret` to create or update a secret in a single call:
+
+```powershell
+New-InfisicalSecret -Name 'DEPLOY_KEY' -Value $secureValue -Force
+```
+
 ## SecretManagement Integration
 
 PSInfisical includes a [Microsoft.PowerShell.SecretManagement](https://learn.microsoft.com/en-us/powershell/utility-modules/secretmanagement/overview) vault extension. This lets you use the standard `Get-Secret` / `Set-Secret` / `Remove-Secret` cmdlets to access Infisical secrets alongside other vault providers (Azure Key Vault, AWS Secrets Manager, KeePass, etc.).

@@ -27,6 +27,9 @@ function Get-InfisicalSecret {
 
     .PARAMETER Raw
         Return just the plaintext string value instead of an InfisicalSecret object.
+        If the secret exists but has an empty or null value, returns $null or an
+        empty string. Use the default (non-Raw) output to inspect metadata when
+        the value is unexpectedly empty.
 
     .EXAMPLE
         Get-InfisicalSecret -Name 'DATABASE_URL'
@@ -64,6 +67,7 @@ function Get-InfisicalSecret {
         [string] $Environment,
 
         [Parameter()]
+        [Alias('Path')]
         [string] $SecretPath = '/',
 
         [Parameter()]
@@ -106,33 +110,7 @@ function Get-InfisicalSecret {
         return $secretData.secretValue
     }
 
-    $secret = [InfisicalSecret]::new()
-    $secret.Name = $secretData.secretKey
-    $secret.Environment = $resolvedEnvironment
-    $secret.Path = if ($secretData.PSObject.Properties['secretPath'] -and $secretData.secretPath) { $secretData.secretPath } else { $SecretPath }
-    $secret.ProjectId = $resolvedProjectId
-    $secret.Version = if ($null -ne $secretData.version) { [int]$secretData.version } else { 0 }
-    $secret.Comment = if ($secretData.secretComment) { $secretData.secretComment } else { '' }
-    $secret.Id = if ($secretData.id) { $secretData.id } elseif ($secretData._id) { $secretData._id } else { '' }
-
-    # Parse timestamps safely with invariant culture
-    $parsedDate = [datetime]::MinValue
-    if ($secretData.createdAt -and [datetime]::TryParse($secretData.createdAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-        $secret.CreatedAt = $parsedDate
-    }
-    if ($secretData.updatedAt -and [datetime]::TryParse($secretData.updatedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-        $secret.UpdatedAt = $parsedDate
-    }
-
-    # Store value as SecureString
-    if ($null -ne $secretData.secretValue) {
-        $secureValue = [System.Security.SecureString]::new()
-        foreach ($char in $secretData.secretValue.ToString().ToCharArray()) {
-            $secureValue.AppendChar($char)
-        }
-        $secureValue.MakeReadOnly()
-        $secret.Value = $secureValue
-    }
+    $secret = ConvertTo-InfisicalSecret -SecretData $secretData -Environment $resolvedEnvironment -ProjectId $resolvedProjectId -FallbackPath $SecretPath
 
     return $secret
 }

@@ -38,6 +38,10 @@ function New-InfisicalSecret {
     .PARAMETER SkipMultilineEncoding
         Skip encoding for multiline secret values.
 
+    .PARAMETER Force
+        If the secret already exists, update it instead of failing. Enables
+        idempotent create-or-update semantics for CI/CD scripts.
+
     .PARAMETER PassThru
         Return the created InfisicalSecret object.
 
@@ -51,6 +55,11 @@ function New-InfisicalSecret {
         New-InfisicalSecret 'API_KEY' -PlainTextValue 'sk-test-123' -PassThru
 
         Creates a secret with a plaintext value (with warning) and returns the created object.
+
+    .EXAMPLE
+        New-InfisicalSecret 'DATABASE_URL' -Value $secureValue -Force
+
+        Creates the secret if it does not exist, or updates it if it already exists.
 
     .OUTPUTS
         [InfisicalSecret] when -PassThru is specified; otherwise, no output.
@@ -86,6 +95,7 @@ function New-InfisicalSecret {
         [string] $Environment,
 
         [Parameter()]
+        [Alias('Path')]
         [string] $SecretPath = '/',
 
         [Parameter()]
@@ -96,6 +106,9 @@ function New-InfisicalSecret {
 
         [Parameter()]
         [switch] $SkipMultilineEncoding,
+
+        [Parameter()]
+        [switch] $Force,
 
         [Parameter()]
         [switch] $PassThru
@@ -119,37 +132,41 @@ function New-InfisicalSecret {
         $body = ConvertTo-InfisicalBody -Session $session -Environment $Environment -SecretPath $SecretPath -ProjectId $ProjectId -SecretValue $Value -Comment $Comment -SkipMultilineEncoding:$SkipMultilineEncoding
 
         $encodedName = [System.Uri]::EscapeDataString($Name)
-        $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v3/secrets/raw/$encodedName" -Body $body -Session $session
 
-        if ($PassThru.IsPresent -and $null -ne $response -and $null -ne $response.secret) {
-            $secretData = $response.secret
-            $secret = [InfisicalSecret]::new()
-            $secret.Name = $secretData.secretKey
-            $secret.Environment = $resolvedEnvironment
-            $secret.Path = if ($secretData.PSObject.Properties['secretPath'] -and $secretData.secretPath) { $secretData.secretPath } else { $SecretPath }
-            $secret.ProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }
-            $secret.Version = if ($null -ne $secretData.version) { [int]$secretData.version } else { 1 }
-            $secret.Comment = if ($secretData.secretComment) { $secretData.secretComment } else { '' }
-            $secret.Id = if ($secretData.id) { $secretData.id } elseif ($secretData._id) { $secretData._id } else { '' }
-
-            $parsedDate = [datetime]::MinValue
-            if ($secretData.createdAt -and [datetime]::TryParse($secretData.createdAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-                $secret.CreatedAt = $parsedDate
-            }
-            if ($secretData.updatedAt -and [datetime]::TryParse($secretData.updatedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-                $secret.UpdatedAt = $parsedDate
-            }
-
-            if ($null -ne $secretData.secretValue) {
-                $secureValue = [System.Security.SecureString]::new()
-                foreach ($char in $secretData.secretValue.ToString().ToCharArray()) {
-                    $secureValue.AppendChar($char)
+        $response = $null
+        $usedUpdate = $false
+        try {
+            $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v3/secrets/raw/$encodedName" -Body $body -Session $session
+        }
+        catch {
+            if ($Force.IsPresent) {
+                # Secret likely already exists — fall back to update
+                Write-Verbose "New-InfisicalSecret: Create failed, updating existing secret '$Name' (-Force)."
+                $setParams = @{
+                    Name       = $Name
+                    Value      = $Value
+                    SecretPath = $SecretPath
+                    Confirm    = $false
                 }
-                $secureValue.MakeReadOnly()
-                $secret.Value = $secureValue
-            }
+                if (-not [string]::IsNullOrEmpty($Environment)) { $setParams['Environment'] = $Environment }
+                if (-not [string]::IsNullOrEmpty($ProjectId))   { $setParams['ProjectId'] = $ProjectId }
+                if (-not [string]::IsNullOrEmpty($Comment))     { $setParams['Comment'] = $Comment }
+                if ($SkipMultilineEncoding.IsPresent)            { $setParams['SkipMultilineEncoding'] = $true }
+                if ($PassThru.IsPresent)                         { $setParams['PassThru'] = $true }
 
-            return $secret
+                $result = Set-InfisicalSecret @setParams
+                $usedUpdate = $true
+                if ($PassThru.IsPresent) {
+                    return $result
+                }
+                return
+            }
+            throw
+        }
+
+        if (-not $usedUpdate -and $PassThru.IsPresent -and $null -ne $response -and $null -ne $response.secret) {
+            $resolvedProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }
+            return ConvertTo-InfisicalSecret -SecretData $response.secret -Environment $resolvedEnvironment -ProjectId $resolvedProjectId -FallbackPath $SecretPath
         }
     }
 }

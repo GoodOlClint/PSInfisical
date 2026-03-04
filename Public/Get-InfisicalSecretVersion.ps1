@@ -27,6 +27,8 @@ function Get-InfisicalSecretVersion {
 
     .PARAMETER Limit
         Maximum number of versions to return. Defaults to 10, maximum 100.
+        Each version requires a separate API call, so higher limits increase
+        latency and may trigger rate limiting.
 
     .EXAMPLE
         Get-InfisicalSecretVersion -Name 'DATABASE_URL'
@@ -62,6 +64,7 @@ function Get-InfisicalSecretVersion {
         [string] $Environment,
 
         [Parameter()]
+        [Alias('Path')]
         [string] $SecretPath = '/',
 
         [Parameter()]

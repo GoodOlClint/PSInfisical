@@ -66,6 +66,7 @@ function Get-InfisicalSecrets {
         [string] $Environment,
 
         [Parameter()]
+        [Alias('Path')]
         [string] $SecretPath = '/',
 
         [Parameter()]
@@ -108,32 +109,7 @@ function Get-InfisicalSecrets {
     $secrets = [System.Collections.Generic.List[InfisicalSecret]]::new()
 
     foreach ($secretData in $response.secrets) {
-        $secret = [InfisicalSecret]::new()
-        $secret.Name = $secretData.secretKey
-        $secret.Environment = $resolvedEnvironment
-        $secret.Path = if ($secretData.PSObject.Properties['secretPath'] -and $secretData.secretPath) { $secretData.secretPath } else { $SecretPath }
-        $secret.ProjectId = $resolvedProjectId
-        $secret.Version = if ($null -ne $secretData.version) { [int]$secretData.version } else { 0 }
-        $secret.Comment = if ($secretData.secretComment) { $secretData.secretComment } else { '' }
-        $secret.Id = if ($secretData.id) { $secretData.id } elseif ($secretData._id) { $secretData._id } else { '' }
-
-        $parsedDate = [datetime]::MinValue
-        if ($secretData.createdAt -and [datetime]::TryParse($secretData.createdAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-            $secret.CreatedAt = $parsedDate
-        }
-        if ($secretData.updatedAt -and [datetime]::TryParse($secretData.updatedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-            $secret.UpdatedAt = $parsedDate
-        }
-
-        if ($null -ne $secretData.secretValue) {
-            $secureValue = [System.Security.SecureString]::new()
-            foreach ($char in $secretData.secretValue.ToString().ToCharArray()) {
-                $secureValue.AppendChar($char)
-            }
-            $secureValue.MakeReadOnly()
-            $secret.Value = $secureValue
-        }
-
+        $secret = ConvertTo-InfisicalSecret -SecretData $secretData -Environment $resolvedEnvironment -ProjectId $resolvedProjectId -FallbackPath $SecretPath
         $secrets.Add($secret)
     }
 

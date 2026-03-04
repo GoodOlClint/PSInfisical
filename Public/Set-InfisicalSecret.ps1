@@ -35,6 +35,9 @@ function Set-InfisicalSecret {
     .PARAMETER Comment
         An optional note or comment to set on the secret.
 
+    .PARAMETER SkipMultilineEncoding
+        Skip encoding for multiline secret values.
+
     .PARAMETER PassThru
         Return the updated InfisicalSecret object.
 
@@ -93,6 +96,9 @@ function Set-InfisicalSecret {
         [string] $Comment,
 
         [Parameter()]
+        [switch] $SkipMultilineEncoding,
+
+        [Parameter()]
         [switch] $PassThru
     )
 
@@ -112,40 +118,14 @@ function Set-InfisicalSecret {
         $resolvedEnvironment = if ([string]::IsNullOrEmpty($Environment)) { $session.DefaultEnvironment } else { $Environment }
 
         if ($PSCmdlet.ShouldProcess("Updating secret '$Name' in path '$SecretPath' (environment: $resolvedEnvironment)")) {
-            $body = ConvertTo-InfisicalBody -Session $session -Environment $Environment -SecretPath $SecretPath -ProjectId $ProjectId -SecretValue $Value -Comment $Comment
+            $body = ConvertTo-InfisicalBody -Session $session -Environment $Environment -SecretPath $SecretPath -ProjectId $ProjectId -SecretValue $Value -Comment $Comment -SkipMultilineEncoding:$SkipMultilineEncoding
 
             $encodedName = [System.Uri]::EscapeDataString($Name)
             $response = Invoke-InfisicalApi -Method PATCH -Endpoint "/api/v3/secrets/raw/$encodedName" -Body $body -Session $session
 
             if ($PassThru.IsPresent -and $null -ne $response -and $null -ne $response.secret) {
-                $secretData = $response.secret
-                $secret = [InfisicalSecret]::new()
-                $secret.Name = $secretData.secretKey
-                $secret.Environment = $resolvedEnvironment
-                $secret.Path = if ($secretData.PSObject.Properties['secretPath'] -and $secretData.secretPath) { $secretData.secretPath } else { $SecretPath }
-                $secret.ProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }
-                $secret.Version = if ($null -ne $secretData.version) { [int]$secretData.version } else { 0 }
-                $secret.Comment = if ($secretData.secretComment) { $secretData.secretComment } else { '' }
-                $secret.Id = if ($secretData.id) { $secretData.id } elseif ($secretData._id) { $secretData._id } else { '' }
-
-                $parsedDate = [datetime]::MinValue
-                if ($secretData.createdAt -and [datetime]::TryParse($secretData.createdAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-                    $secret.CreatedAt = $parsedDate
-                }
-                if ($secretData.updatedAt -and [datetime]::TryParse($secretData.updatedAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
-                    $secret.UpdatedAt = $parsedDate
-                }
-
-                if ($null -ne $secretData.secretValue) {
-                    $secureValue = [System.Security.SecureString]::new()
-                    foreach ($char in $secretData.secretValue.ToString().ToCharArray()) {
-                        $secureValue.AppendChar($char)
-                    }
-                    $secureValue.MakeReadOnly()
-                    $secret.Value = $secureValue
-                }
-
-                return $secret
+                $resolvedProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }
+                return ConvertTo-InfisicalSecret -SecretData $response.secret -Environment $resolvedEnvironment -ProjectId $resolvedProjectId -FallbackPath $SecretPath
             }
         }
     }

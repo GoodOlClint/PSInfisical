@@ -56,6 +56,8 @@ function Get-InfisicalSession {
                 if ($authResponse.expiresIn) {
                     $session.TokenExpiry = [datetime]::UtcNow.AddSeconds($authResponse.expiresIn)
                 }
+                # Clear auth response to reduce plaintext token exposure window
+                $authResponse = $null
                 $session.UpdateConnectionStatus()
                 Write-Verbose 'Get-InfisicalSession: Re-authentication successful.'
             }

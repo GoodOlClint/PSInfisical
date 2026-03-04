@@ -44,5 +44,10 @@
     # dependency during Register-SecretVault's internal module loading).
     RequiredModules    = @()
 
+    # Private data to pass to the module specified in RootModule
+    PrivateData = @{
+        PSData = @{}
+    }
+
 }
 
