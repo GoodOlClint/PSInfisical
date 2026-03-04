@@ -23,6 +23,7 @@ jobs:
           Install-Module -Name InvokeBuild -Scope CurrentUser -Force
           Install-Module -Name Pester -MinimumVersion 5.0 -Scope CurrentUser -Force
           Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+          Install-Module -Name Microsoft.PowerShell.SecretManagement -Scope CurrentUser -Force
 
       - name: Validate version matches release tag
         run: |

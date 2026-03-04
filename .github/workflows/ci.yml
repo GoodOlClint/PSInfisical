@@ -41,6 +41,7 @@ jobs:
           Install-Module -Name InvokeBuild -Scope CurrentUser -Force
           Install-Module -Name Pester -MinimumVersion 5.0 -Scope CurrentUser -Force
           Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+          Install-Module -Name Microsoft.PowerShell.SecretManagement -Scope CurrentUser -Force
 
       - name: Run build pipeline (Clean, Build, Test, Analyze)
         run: Invoke-Build
@@ -72,6 +73,7 @@ jobs:
           Install-Module -Name InvokeBuild -Scope CurrentUser -Force
           Install-Module -Name Pester -MinimumVersion 5.0 -Scope CurrentUser -Force
           Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force
+          Install-Module -Name Microsoft.PowerShell.SecretManagement -Scope CurrentUser -Force
 
       - name: Run integration tests
         run: Invoke-Build Test-Integration
