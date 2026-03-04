@@ -1,5 +1,7 @@
 # PSInfisical
 
+[![CI](https://github.com/GoodOlClint/PSInfisical/actions/workflows/ci.yml/badge.svg)](https://github.com/GoodOlClint/PSInfisical/actions/workflows/ci.yml)
+
 A PowerShell module providing a clean, idiomatic interface to the [Infisical](https://infisical.com) secrets management API, with built-in [Microsoft.PowerShell.SecretManagement](https://learn.microsoft.com/en-us/powershell/utility-modules/secretmanagement/overview) vault extension support.
 
 ## Overview
