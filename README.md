@@ -1,30 +1,34 @@
 # PSInfisical
 
 [![CI](https://github.com/GoodOlClint/PSInfisical/actions/workflows/ci.yml/badge.svg)](https://github.com/GoodOlClint/PSInfisical/actions/workflows/ci.yml)
+[![PSGallery](https://img.shields.io/powershellgallery/v/PSInfisical?label=PSGallery)](https://www.powershellgallery.com/packages/PSInfisical)
 
 A PowerShell module providing a clean, idiomatic interface to the [Infisical](https://infisical.com) secrets management API, with built-in [Microsoft.PowerShell.SecretManagement](https://learn.microsoft.com/en-us/powershell/utility-modules/secretmanagement/overview) vault extension support.
 
 ## Overview
 
-PSInfisical enables you to manage secrets stored in Infisical directly from PowerShell. It covers secrets CRUD operations with full SecureString support, multiple authentication methods, pipeline-friendly output, and integration with the standard SecretManagement framework.
+PSInfisical enables you to manage secrets stored in Infisical directly from PowerShell. It covers the full Infisical Secrets Vault API with SecureString support, 10 authentication methods, pipeline-friendly output, and integration with the standard SecretManagement framework.
 
 **What PSInfisical covers:**
-- Authentication (Universal Auth, static tokens, pre-obtained JWTs)
-- Create, read, update, and delete secrets
-- List secrets with filtering and hashtable output
-- Secret version history
+- Authentication (Universal Auth, AWS, Azure, GCP, Kubernetes, OIDC, JWT, LDAP, static tokens, pre-obtained JWTs)
+- Secrets: create, read, update, delete, version history, bulk operations
+- Folders: create, list, rename, delete
+- Tags: create, list, update, delete, attach to secrets
+- Secret imports: create, list, update, delete (cross-environment secret sharing)
+- Project and environment discovery
+- Server API version detection for self-hosted compatibility
 - SecureString-first design for secret values
 - Microsoft.PowerShell.SecretManagement vault extension
 
-**What PSInfisical does not cover (planned for separate modules):**
+**What PSInfisical does not cover (separate Infisical products):**
 - Certificates and PKI
 - SSH key management
 - Dynamic secrets
-- Secret rotation configuration
+- KMS encryption/signing
 
 ## Installation
 
-### From PSGallery (coming soon)
+### From PSGallery
 
 ```powershell
 Install-Module -Name PSInfisical -Scope CurrentUser
@@ -79,6 +83,13 @@ You now have the three values needed to connect:
 | Method | Use Case | Auto-Refresh |
 |--------|----------|:------------:|
 | **Universal Auth** (`-ClientId` + `-ClientSecret`) | Production, CI/CD, automation | Yes |
+| **AWS Auth** (`-AWSIdentityDocument`) | EC2 instances, Lambda | No |
+| **Azure Auth** (`-AzureJwt`) | Azure managed identities | No |
+| **GCP Auth** (`-GCPIdentityToken`) | GCP workloads | No |
+| **Kubernetes Auth** (`-KubernetesServiceAccountToken` + `-KubernetesIdentityId`) | K8s pods | No |
+| **OIDC Auth** (`-OIDCToken` + `-OIDCIdentityId`) | OIDC providers (GitHub Actions, etc.) | No |
+| **JWT Auth** (`-Jwt` + `-JwtIdentityId`) | Generic JWT authentication | No |
+| **LDAP Auth** (`-LDAPUsername` + `-LDAPPassword`) | LDAP/Active Directory | No |
 | **Static Token** (`-Token`) | Quick testing, service accounts | No |
 | **Pre-obtained JWT** (`-AccessToken`) | CI systems that provide tokens externally | No |
 
@@ -135,15 +146,57 @@ Connect-Infisical -ClientId 'id' -ClientSecret $secret `
 | Command | Description |
 |---------|-------------|
 | `Get-InfisicalSecret` | Get a single secret by name (`-Raw` for plaintext) |
-| `Get-InfisicalSecrets` | List all secrets (`-Filter`, `-Recursive`, `-AsHashtable`) |
-| `New-InfisicalSecret` | Create a new secret |
-| `Set-InfisicalSecret` | Update an existing secret |
-| `Remove-InfisicalSecret` | Delete a secret (supports pipeline input) |
+| `Get-InfisicalSecrets` | List all secrets (`-Filter`, `-Recursive`, `-AsHashtable`, `-TagSlugs`, `-MetadataFilter`) |
+| `New-InfisicalSecret` | Create a new secret (`-TagIds`, `-Metadata`, `-Type`, `-Force` for upsert) |
+| `Set-InfisicalSecret` | Update an existing secret (`-NewName` to rename, `-TagIds`, `-Metadata`) |
+| `Remove-InfisicalSecret` | Delete a secret (supports pipeline input, `-Type`) |
 | `Get-InfisicalSecretVersion` | View secret version history (`-Limit`) |
+
+### Bulk Operations
+
+| Command | Description |
+|---------|-------------|
+| `New-InfisicalSecretBulk` | Create multiple secrets in a single API call |
+| `Set-InfisicalSecretBulk` | Update multiple secrets in a single API call |
+| `Remove-InfisicalSecretBulk` | Delete multiple secrets in a single API call (supports pipeline) |
+
+### Folder Management
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalFolder` | List folders or get by ID (`-Recursive`) |
+| `New-InfisicalFolder` | Create a folder (`-Description`) |
+| `Set-InfisicalFolder` | Rename a folder or update description |
+| `Remove-InfisicalFolder` | Delete a folder (`-ForceDelete` for non-empty folders) |
+
+### Tag Management
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalTag` | List tags, get by ID or slug |
+| `New-InfisicalTag` | Create a tag with slug and color |
+| `Set-InfisicalTag` | Update tag slug or color |
+| `Remove-InfisicalTag` | Delete a tag |
+
+### Secret Imports
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalSecretImport` | List secret imports at a path |
+| `New-InfisicalSecretImport` | Import secrets from another environment/path (`-IsReplication`) |
+| `Set-InfisicalSecretImport` | Update import source or position |
+| `Remove-InfisicalSecretImport` | Delete a secret import |
+
+### Discovery
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalEnvironment` | List environments in a project |
+| `Get-InfisicalProject` | List projects or get by ID |
 
 ### Common Parameters
 
-Most secret commands accept these optional parameters:
+Most commands accept these optional parameters:
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
@@ -242,11 +295,18 @@ Register-SecretVault -Name 'Infisical' -ModuleName 'PSInfisical' -VaultParameter
 }
 ```
 
-All three authentication methods are supported via `VaultParameters`:
+All authentication methods are supported via `VaultParameters`:
 
 | VaultParameters Keys | Auth Method |
 |----------------------|-------------|
 | `ClientId` + `ClientSecret` | Universal Auth (recommended) |
+| `AWSIdentityDocument` | AWS Auth |
+| `AzureJwt` | Azure Auth |
+| `GCPIdentityToken` | GCP Auth |
+| `KubernetesServiceAccountToken` + `KubernetesIdentityId` | Kubernetes Auth |
+| `OIDCToken` + `OIDCIdentityId` | OIDC Auth |
+| `Jwt` + `JwtIdentityId` | JWT Auth |
+| `LDAPUsername` + `LDAPPassword` | LDAP Auth |
 | `Token` | Static API token |
 | `AccessToken` | Pre-obtained JWT |
 
