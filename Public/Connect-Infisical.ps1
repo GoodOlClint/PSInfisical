@@ -249,49 +249,49 @@ function Connect-Infisical {
             }
             'AWSAuth' {
                 $authBody = @{ iamHttpRequestMethod = 'POST'; iamRequestBody = $AWSIdentityDocument }
-                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'aws-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'aws-auth' -Body $authBody -CallerCmdlet $PSCmdlet
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }
             'AzureAuth' {
                 $jwt = [System.Net.NetworkCredential]::new('', $AzureJwt).Password
                 $authBody = @{ jwt = $jwt }
-                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'azure-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'azure-auth' -Body $authBody -CallerCmdlet $PSCmdlet
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }
             'GCPAuth' {
                 $token = [System.Net.NetworkCredential]::new('', $GCPIdentityToken).Password
                 $authBody = @{ jwt = $token }
-                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'gcp-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'gcp-auth' -Body $authBody -CallerCmdlet $PSCmdlet
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }
             'KubernetesAuth' {
                 $saToken = [System.Net.NetworkCredential]::new('', $KubernetesServiceAccountToken).Password
                 $authBody = @{ jwt = $saToken; identityId = $KubernetesIdentityId }
-                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'kubernetes-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'kubernetes-auth' -Body $authBody -CallerCmdlet $PSCmdlet
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }
             'OIDCAuth' {
                 $oidcJwt = [System.Net.NetworkCredential]::new('', $OIDCToken).Password
                 $authBody = @{ jwt = $oidcJwt; identityId = $OIDCIdentityId }
-                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'oidc-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'oidc-auth' -Body $authBody -CallerCmdlet $PSCmdlet
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }
             'JWTAuth' {
                 $jwtValue = [System.Net.NetworkCredential]::new('', $Jwt).Password
                 $authBody = @{ jwt = $jwtValue; identityId = $JwtIdentityId }
-                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'jwt-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'jwt-auth' -Body $authBody -CallerCmdlet $PSCmdlet
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }
             'LDAPAuth' {
                 $ldapPass = [System.Net.NetworkCredential]::new('', $LDAPPassword).Password
                 $authBody = @{ username = $LDAPUsername; password = $ldapPass }
-                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'ldap-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'ldap-auth' -Body $authBody -CallerCmdlet $PSCmdlet
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }

@@ -296,6 +296,41 @@ function Get-SampleSecretImportsListResponse {
     }
 }
 
+# Sample API response for listing environments
+function Get-SampleEnvironmentsResponse {
+    return @{
+        environments = @(
+            @{ id = 'env-001'; name = 'Development'; slug = 'dev'; position = 1 }
+            @{ id = 'env-002'; name = 'Staging';     slug = 'staging'; position = 2 }
+            @{ id = 'env-003'; name = 'Production';  slug = 'prod'; position = 3 }
+        )
+    }
+}
+
+# Sample API response for a single project/workspace
+function Get-SampleProjectResponse {
+    param([string] $Id = 'proj-abc-123')
+    return @{
+        workspace = @{
+            id        = $Id
+            name      = 'My Project'
+            slug      = 'my-project'
+            createdAt = '2024-01-01T00:00:00Z'
+            updatedAt = '2024-06-01T00:00:00Z'
+        }
+    }
+}
+
+# Sample API response for listing projects/workspaces
+function Get-SampleProjectsListResponse {
+    return @{
+        workspaces = @(
+            @{ id = 'proj-001'; name = 'Project Alpha'; slug = 'alpha'; createdAt = '2024-01-01T00:00:00Z'; updatedAt = '2024-06-01T00:00:00Z' }
+            @{ id = 'proj-002'; name = 'Project Beta';  slug = 'beta';  createdAt = '2024-02-01T00:00:00Z'; updatedAt = '2024-06-15T00:00:00Z' }
+        )
+    }
+}
+
 # Sample auth response (as returned by /v1/auth/universal-auth/login)
 function Get-SampleAuthResponse {
     return @{

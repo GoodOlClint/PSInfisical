@@ -5,6 +5,7 @@
 # Dependencies: InfisicalSession class
 
 function Set-InfisicalSessionToken {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Internal helper that modifies in-memory session object only')]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]

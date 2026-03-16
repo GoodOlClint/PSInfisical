@@ -55,6 +55,8 @@ Describe 'PSInfisical Module' {
                 'New-InfisicalSecretBulk'
                 'Set-InfisicalSecretBulk'
                 'Remove-InfisicalSecretBulk'
+                'Get-InfisicalEnvironment'
+                'Get-InfisicalProject'
             )
             $module = Get-Module -Name PSInfisical
         }
@@ -110,6 +112,8 @@ Describe 'PSInfisical Module' {
             'New-InfisicalSecretBulk'
             'Set-InfisicalSecretBulk'
             'Remove-InfisicalSecretBulk'
+            'Get-InfisicalEnvironment'
+            'Get-InfisicalProject'
         ) {
             $help = Get-Help $_
             $help.Synopsis | Should -Not -BeNullOrEmpty
@@ -139,6 +143,8 @@ Describe 'PSInfisical Module' {
             'New-InfisicalSecretBulk'
             'Set-InfisicalSecretBulk'
             'Remove-InfisicalSecretBulk'
+            'Get-InfisicalEnvironment'
+            'Get-InfisicalProject'
         ) {
             $help = Get-Help $_
             $help.examples.example.Count | Should -BeGreaterOrEqual 1
@@ -170,6 +176,8 @@ Describe 'PSInfisical Module' {
             'New-InfisicalSecretBulk'
             'Set-InfisicalSecretBulk'
             'Remove-InfisicalSecretBulk'
+            'Get-InfisicalEnvironment'
+            'Get-InfisicalProject'
         ) {
             $cmd = Get-Command $_
             $cmd.OutputType | Should -Not -BeNullOrEmpty

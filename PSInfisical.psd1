@@ -52,6 +52,8 @@
         'New-InfisicalSecretBulk'
         'Set-InfisicalSecretBulk'
         'Remove-InfisicalSecretBulk'
+        'Get-InfisicalEnvironment'
+        'Get-InfisicalProject'
     )
 
     # Cmdlets to export from this module

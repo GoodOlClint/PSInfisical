@@ -17,7 +17,7 @@ function Invoke-InfisicalAuthEndpoint {
         [hashtable] $Body,
 
         [Parameter(Mandatory)]
-        [System.Management.Automation.PSCmdlet] $PSCmdlet
+        [System.Management.Automation.PSCmdlet] $CallerCmdlet
     )
 
     $authUri = "$ApiUrl/api/v1/auth/$AuthPath/login"
@@ -37,7 +37,7 @@ function Invoke-InfisicalAuthEndpoint {
             [System.Management.Automation.ErrorCategory]::AuthenticationError,
             $authUri
         )
-        $PSCmdlet.ThrowTerminatingError($errorRecord)
+        $CallerCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     if (-not $response -or [string]::IsNullOrEmpty($response.accessToken)) {
@@ -49,7 +49,7 @@ function Invoke-InfisicalAuthEndpoint {
             [System.Management.Automation.ErrorCategory]::AuthenticationError,
             $authUri
         )
-        $PSCmdlet.ThrowTerminatingError($errorRecord)
+        $CallerCmdlet.ThrowTerminatingError($errorRecord)
     }
 
     return $response
