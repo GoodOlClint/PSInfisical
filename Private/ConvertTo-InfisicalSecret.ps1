@@ -40,6 +40,41 @@ function ConvertTo-InfisicalSecret {
         $secret.UpdatedAt = $parsedDate
     }
 
+    # Map v4 fields: tags, metadata, reminders, type
+    $hasTags = ($SecretData -is [hashtable] -and $SecretData.ContainsKey('tags')) -or ($SecretData -isnot [hashtable] -and $SecretData.PSObject.Properties['tags'])
+    if ($hasTags -and $null -ne $SecretData.tags -and @($SecretData.tags).Count -gt 0) {
+        $tagList = [System.Collections.Generic.List[string]]::new()
+        foreach ($tag in $SecretData.tags) {
+            if ($tag -is [hashtable] -and $tag.ContainsKey('id')) {
+                $tagList.Add([string]$tag['id'])
+            } elseif ($tag.PSObject.Properties['id']) {
+                $tagList.Add([string]$tag.id)
+            } else {
+                $tagList.Add([string]$tag)
+            }
+        }
+        $secret.TagIds = $tagList.ToArray()
+    } else {
+        $secret.TagIds = @()
+    }
+
+    $hasMetadata = ($SecretData -is [hashtable] -and $SecretData.ContainsKey('secretMetadata')) -or ($SecretData -isnot [hashtable] -and $SecretData.PSObject.Properties['secretMetadata'])
+    if ($hasMetadata -and $null -ne $SecretData.secretMetadata -and @($SecretData.secretMetadata).Count -gt 0) {
+        $ht = @{}
+        foreach ($entry in $SecretData.secretMetadata) {
+            $entryKey = if ($entry -is [hashtable]) { $entry['key'] } else { $entry.key }
+            $entryValue = if ($entry -is [hashtable]) { $entry['value'] } else { $entry.value }
+            if ($entryKey) { $ht[$entryKey] = $entryValue }
+        }
+        $secret.Metadata = $ht
+    } else {
+        $secret.Metadata = @{}
+    }
+
+    $secret.ReminderRepeatDays = if ($null -ne $SecretData.secretReminderRepeatDays) { [int]$SecretData.secretReminderRepeatDays } else { 0 }
+    $secret.ReminderNote = if ($SecretData.secretReminderNote) { $SecretData.secretReminderNote } else { '' }
+    $secret.Type = if ($SecretData.type) { $SecretData.type } else { 'shared' }
+
     # Store value as SecureString
     if ($null -ne $SecretData.secretValue) {
         $secureValue = [System.Security.SecureString]::new()

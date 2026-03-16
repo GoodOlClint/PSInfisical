@@ -38,10 +38,12 @@ class InfisicalSession {
     [System.Security.SecureString] $ClientSecret  # Stored for re-auth (UniversalAuth only)
 
     [bool] $Connected
+    [hashtable] $ApiCapabilities     # Tracks which API versions are available
 
     InfisicalSession() {
         $this.DefaultEnvironment = 'prod'
         $this.Connected = $false
+        $this.ApiCapabilities = @{}
     }
 
     # Update Connected based on token state
@@ -94,8 +96,17 @@ class InfisicalSecret {
     [datetime] $CreatedAt
     [datetime] $UpdatedAt
     [string] $Id
+    [string[]] $TagIds
+    [hashtable] $Metadata
+    [int] $ReminderRepeatDays
+    [string] $ReminderNote
+    [string] $Type              # 'shared' or 'personal'
 
-    InfisicalSecret() { }
+    InfisicalSecret() {
+        $this.TagIds = @()
+        $this.Metadata = @{}
+        $this.Type = 'shared'
+    }
 
     # Decrypts and returns the plaintext value. Use with care — the plaintext
     # string will remain in managed memory until garbage collected.
@@ -112,6 +123,28 @@ class InfisicalSecret {
     }
 }
 
+class InfisicalFolder {
+    [string] $Id
+    [string] $Name
+    [string] $Environment
+    [string] $Path              # Parent path (e.g., "/" means folder is at root)
+    [string] $ProjectId
+    [string] $Description
+    [datetime] $CreatedAt
+    [datetime] $UpdatedAt
+
+    InfisicalFolder() { }
+
+    [string] GetFullPath() {
+        $parentPath = $this.Path.TrimEnd('/')
+        return "$parentPath/$($this.Name)"
+    }
+
+    [string] ToString() {
+        return "InfisicalFolder: $($this.GetFullPath()) (Environment=$($this.Environment))"
+    }
+}
+
 # --- Register type accelerators ---
 # PowerShell classes defined in a module are NOT visible as type literals
 # (e.g. [InfisicalSession]) when dot-sourcing function files within the same
@@ -122,6 +155,7 @@ $script:TypeAcceleratorsType = [psobject].Assembly.GetType('System.Management.Au
 @(
     @{ Name = 'InfisicalSession'; Type = [InfisicalSession] }
     @{ Name = 'InfisicalSecret';  Type = [InfisicalSecret] }
+    @{ Name = 'InfisicalFolder';  Type = [InfisicalFolder] }
 ) | ForEach-Object {
     if (-not $script:TypeAcceleratorsType::Get.ContainsKey($_.Name)) {
         $script:TypeAcceleratorsType::Add($_.Name, $_.Type)
@@ -131,7 +165,7 @@ $script:TypeAcceleratorsType = [psobject].Assembly.GetType('System.Management.Au
 # Clean up type accelerators when the module is removed to avoid leaking
 # into the session after Remove-Module.
 $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
-    @('InfisicalSession', 'InfisicalSecret') | ForEach-Object {
+    @('InfisicalSession', 'InfisicalSecret', 'InfisicalFolder') | ForEach-Object {
         if ($script:TypeAcceleratorsType::Get.ContainsKey($_)) {
             $script:TypeAcceleratorsType::Remove($_)
         }

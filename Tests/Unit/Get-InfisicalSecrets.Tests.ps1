@@ -54,6 +54,73 @@ Describe 'Get-InfisicalSecrets' {
         }
     }
 
+    Context 'v4 properties on returned objects' {
+        It 'Returns TagIds from API response' {
+            Mock Invoke-RestMethod {
+                return Get-SampleSecretsListResponse
+            } -ModuleName PSInfisical
+
+            $results = Get-InfisicalSecrets
+
+            # Third secret (API_KEY) has a tag in the sample response
+            $results[2].TagIds | Should -HaveCount 1
+            $results[2].TagIds[0] | Should -Be 'tag-001'
+        }
+
+        It 'Returns Metadata from API response' {
+            Mock Invoke-RestMethod {
+                return Get-SampleSecretsListResponse
+            } -ModuleName PSInfisical
+
+            $results = Get-InfisicalSecrets
+
+            $results[2].Metadata.Keys | Should -Contain 'owner'
+            $results[2].Metadata['owner'] | Should -Be 'platform-team'
+        }
+
+        It 'Returns Type from API response' {
+            Mock Invoke-RestMethod {
+                return Get-SampleSecretsListResponse
+            } -ModuleName PSInfisical
+
+            $results = Get-InfisicalSecrets
+
+            $results[0].Type | Should -Be 'shared'
+        }
+    }
+
+    Context 'v4 query parameters' {
+        It 'Passes -TagSlugs as comma-separated query param' {
+            Mock Invoke-RestMethod {
+                param($Uri)
+                $Uri | Should -Match 'tagSlugs=prod%2Cdb'
+                return Get-SampleSecretsListResponse
+            } -ModuleName PSInfisical
+
+            Get-InfisicalSecrets -TagSlugs @('prod', 'db') | Out-Null
+        }
+
+        It 'Passes -ExpandSecretReferences as query param' {
+            Mock Invoke-RestMethod {
+                param($Uri)
+                $Uri | Should -Match 'expandSecretReferences=true'
+                return Get-SampleSecretsListResponse
+            } -ModuleName PSInfisical
+
+            Get-InfisicalSecrets -ExpandSecretReferences | Out-Null
+        }
+
+        It 'Passes -IncludeImports as query param' {
+            Mock Invoke-RestMethod {
+                param($Uri)
+                $Uri | Should -Match 'includeImports=true'
+                return Get-SampleSecretsListResponse
+            } -ModuleName PSInfisical
+
+            Get-InfisicalSecrets -IncludeImports | Out-Null
+        }
+    }
+
     Context '-AsHashtable' {
         It 'Returns hashtable with Name as key' {
             Mock Invoke-RestMethod {

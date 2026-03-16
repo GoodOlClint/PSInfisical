@@ -38,6 +38,21 @@ function New-InfisicalSecret {
     .PARAMETER SkipMultilineEncoding
         Skip encoding for multiline secret values.
 
+    .PARAMETER TagIds
+        An array of tag IDs to attach to the secret.
+
+    .PARAMETER Metadata
+        A hashtable of key-value metadata pairs to attach to the secret.
+
+    .PARAMETER ReminderRepeatDays
+        Interval for secret rotation reminders, measured in days.
+
+    .PARAMETER ReminderNote
+        A note to include in rotation reminder notification emails.
+
+    .PARAMETER Type
+        The secret type: 'shared' (default) or 'personal'.
+
     .PARAMETER Force
         If the secret already exists, update it instead of failing. Enables
         idempotent create-or-update semantics for CI/CD scripts.
@@ -108,6 +123,24 @@ function New-InfisicalSecret {
         [switch] $SkipMultilineEncoding,
 
         [Parameter()]
+        [string[]] $TagIds,
+
+        [Parameter()]
+        [hashtable] $Metadata,
+
+        [Parameter()]
+        [ValidateRange(1, 365)]
+        [int] $ReminderRepeatDays,
+
+        [Parameter()]
+        [ValidateLength(0, 1024)]
+        [string] $ReminderNote,
+
+        [Parameter()]
+        [ValidateSet('shared', 'personal')]
+        [string] $Type,
+
+        [Parameter()]
         [switch] $Force,
 
         [Parameter()]
@@ -129,14 +162,28 @@ function New-InfisicalSecret {
     $resolvedEnvironment = if ([string]::IsNullOrEmpty($Environment)) { $session.DefaultEnvironment } else { $Environment }
 
     if ($PSCmdlet.ShouldProcess("Creating secret '$Name' in path '$SecretPath' (environment: $resolvedEnvironment)")) {
-        $body = ConvertTo-InfisicalBody -Session $session -Environment $Environment -SecretPath $SecretPath -ProjectId $ProjectId -SecretValue $Value -Comment $Comment -SkipMultilineEncoding:$SkipMultilineEncoding
+        $bodyParams = @{
+            Session              = $session
+            Environment          = $Environment
+            SecretPath           = $SecretPath
+            ProjectId            = $ProjectId
+            SecretValue          = $Value
+            Comment              = $Comment
+            SkipMultilineEncoding = $SkipMultilineEncoding
+        }
+        if ($null -ne $TagIds -and $TagIds.Count -gt 0)                { $bodyParams['TagIds'] = $TagIds }
+        if ($null -ne $Metadata -and $Metadata.Count -gt 0)            { $bodyParams['SecretMetadata'] = $Metadata }
+        if ($PSBoundParameters.ContainsKey('ReminderRepeatDays'))       { $bodyParams['ReminderRepeatDays'] = $ReminderRepeatDays }
+        if (-not [string]::IsNullOrEmpty($ReminderNote))               { $bodyParams['ReminderNote'] = $ReminderNote }
+        if (-not [string]::IsNullOrEmpty($Type))                       { $bodyParams['Type'] = $Type }
+        $body = ConvertTo-InfisicalBody @bodyParams
 
         $encodedName = [System.Uri]::EscapeDataString($Name)
 
         $response = $null
         $usedUpdate = $false
         try {
-            $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v3/secrets/raw/$encodedName" -Body $body -Session $session
+            $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v4/secrets/raw/$encodedName" -Body $body -Session $session
         }
         catch {
             if ($Force.IsPresent) {
@@ -152,6 +199,11 @@ function New-InfisicalSecret {
                 if (-not [string]::IsNullOrEmpty($ProjectId))   { $setParams['ProjectId'] = $ProjectId }
                 if (-not [string]::IsNullOrEmpty($Comment))     { $setParams['Comment'] = $Comment }
                 if ($SkipMultilineEncoding.IsPresent)            { $setParams['SkipMultilineEncoding'] = $true }
+                if ($null -ne $TagIds -and $TagIds.Count -gt 0) { $setParams['TagIds'] = $TagIds }
+                if ($null -ne $Metadata -and $Metadata.Count -gt 0) { $setParams['Metadata'] = $Metadata }
+                if ($PSBoundParameters.ContainsKey('ReminderRepeatDays')) { $setParams['ReminderRepeatDays'] = $ReminderRepeatDays }
+                if (-not [string]::IsNullOrEmpty($ReminderNote)) { $setParams['ReminderNote'] = $ReminderNote }
+                if (-not [string]::IsNullOrEmpty($Type))         { $setParams['Type'] = $Type }
                 if ($PassThru.IsPresent)                         { $setParams['PassThru'] = $true }
 
                 $result = Set-InfisicalSecret @setParams

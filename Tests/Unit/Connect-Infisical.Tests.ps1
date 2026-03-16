@@ -13,6 +13,13 @@ BeforeAll {
 
 Describe 'Connect-Infisical' {
 
+    BeforeAll {
+        # Mock capability probe to avoid real HTTP calls during tests
+        Mock Test-InfisicalApiCapability {
+            return @{ SecretsV4 = $true; SecretsV3 = $true }
+        } -ModuleName PSInfisical
+    }
+
     BeforeEach {
         # Ensure clean state
         Disconnect-Infisical -Confirm:$false -ErrorAction SilentlyContinue

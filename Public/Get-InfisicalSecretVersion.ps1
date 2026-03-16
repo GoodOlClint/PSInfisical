@@ -88,7 +88,7 @@ function Get-InfisicalSecretVersion {
     }
 
     $encodedName = [System.Uri]::EscapeDataString($Name)
-    $currentResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v3/secrets/raw/$encodedName" -QueryParameters $queryParams -Session $session
+    $currentResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/raw/$encodedName" -QueryParameters $queryParams -Session $session
 
     if ($null -eq $currentResponse -or $null -eq $currentResponse.secret) {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(
@@ -115,7 +115,7 @@ function Get-InfisicalSecretVersion {
             version     = $v
         }
 
-        $versionResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v3/secrets/raw/$encodedName" -QueryParameters $versionParams -Session $session
+        $versionResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/raw/$encodedName" -QueryParameters $versionParams -Session $session
 
         if ($null -ne $versionResponse -and $null -ne $versionResponse.secret) {
             $secretData = $versionResponse.secret

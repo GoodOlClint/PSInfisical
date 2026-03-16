@@ -31,6 +31,28 @@ function ConvertTo-InfisicalBody {
         [switch] $SkipMultilineEncoding,
 
         [Parameter()]
+        [string[]] $TagIds,
+
+        [Parameter()]
+        [hashtable] $SecretMetadata,
+
+        [Parameter()]
+        [int] $ReminderRepeatDays,
+
+        [Parameter()]
+        [string] $ReminderNote,
+
+        [Parameter()]
+        [string[]] $ReminderRecipients,
+
+        [Parameter()]
+        [string] $NewSecretName,
+
+        [Parameter()]
+        [ValidateSet('shared', 'personal')]
+        [string] $Type,
+
+        [Parameter()]
         [hashtable] $AdditionalProperties
     )
 
@@ -65,6 +87,38 @@ function ConvertTo-InfisicalBody {
 
     if ($SkipMultilineEncoding.IsPresent) {
         $body['skipMultilineEncoding'] = $true
+    }
+
+    if ($null -ne $TagIds -and $TagIds.Count -gt 0) {
+        $body['tagIds'] = $TagIds
+    }
+
+    if ($null -ne $SecretMetadata -and $SecretMetadata.Count -gt 0) {
+        $metadataArray = [System.Collections.Generic.List[hashtable]]::new()
+        foreach ($key in $SecretMetadata.Keys) {
+            $metadataArray.Add(@{ key = $key; value = [string]$SecretMetadata[$key] })
+        }
+        $body['secretMetadata'] = @($metadataArray)
+    }
+
+    if ($PSBoundParameters.ContainsKey('ReminderRepeatDays') -and $ReminderRepeatDays -gt 0) {
+        $body['secretReminderRepeatDays'] = $ReminderRepeatDays
+    }
+
+    if (-not [string]::IsNullOrEmpty($ReminderNote)) {
+        $body['secretReminderNote'] = $ReminderNote
+    }
+
+    if ($null -ne $ReminderRecipients -and $ReminderRecipients.Count -gt 0) {
+        $body['secretReminderRecipients'] = $ReminderRecipients
+    }
+
+    if (-not [string]::IsNullOrEmpty($NewSecretName)) {
+        $body['newSecretName'] = $NewSecretName
+    }
+
+    if (-not [string]::IsNullOrEmpty($Type)) {
+        $body['type'] = $Type
     }
 
     # Merge any additional properties

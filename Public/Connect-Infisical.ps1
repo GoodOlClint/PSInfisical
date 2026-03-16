@@ -201,6 +201,16 @@ function Connect-Infisical {
         $session.UpdateConnectionStatus()
         $script:InfisicalSession = $session
 
+        # Probe server API capabilities for version gating
+        Write-Verbose 'Connect-Infisical: Probing server API capabilities...'
+        try {
+            $session.ApiCapabilities = Test-InfisicalApiCapability -Session $session
+        }
+        catch {
+            Write-Warning "Connect-Infisical: Unable to detect server API capabilities: $($_.Exception.Message). Version checks will be skipped."
+            $session.ApiCapabilities = @{}
+        }
+
         Write-Verbose "Connect-Infisical: Session established. Connected=$($session.Connected)"
 
         if ($PassThru.IsPresent) {

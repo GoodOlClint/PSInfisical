@@ -22,10 +22,10 @@ Describe 'PSInfisical Module' {
             { Test-ModuleManifest -Path $manifestPath -ErrorAction Stop } | Should -Not -Throw
         }
 
-        It 'Manifest version is 0.1.0' {
+        It 'Manifest version is 0.2.0' {
             $manifestPath = Join-Path -Path $PSScriptRoot -ChildPath '../PSInfisical.psd1'
             $manifest = Test-ModuleManifest -Path $manifestPath
-            $manifest.Version.ToString() | Should -Be '0.1.0'
+            $manifest.Version.ToString() | Should -Be '0.2.0'
         }
     }
 
@@ -40,6 +40,10 @@ Describe 'PSInfisical Module' {
                 'Set-InfisicalSecret'
                 'Remove-InfisicalSecret'
                 'Get-InfisicalSecretVersion'
+                'Get-InfisicalFolder'
+                'New-InfisicalFolder'
+                'Set-InfisicalFolder'
+                'Remove-InfisicalFolder'
             )
             $module = Get-Module -Name PSInfisical
         }
@@ -80,6 +84,10 @@ Describe 'PSInfisical Module' {
             'Set-InfisicalSecret'
             'Remove-InfisicalSecret'
             'Get-InfisicalSecretVersion'
+            'Get-InfisicalFolder'
+            'New-InfisicalFolder'
+            'Set-InfisicalFolder'
+            'Remove-InfisicalFolder'
         ) {
             $help = Get-Help $_
             $help.Synopsis | Should -Not -BeNullOrEmpty
@@ -94,6 +102,10 @@ Describe 'PSInfisical Module' {
             'Set-InfisicalSecret'
             'Remove-InfisicalSecret'
             'Get-InfisicalSecretVersion'
+            'Get-InfisicalFolder'
+            'New-InfisicalFolder'
+            'Set-InfisicalFolder'
+            'Remove-InfisicalFolder'
         ) {
             $help = Get-Help $_
             $help.examples.example.Count | Should -BeGreaterOrEqual 1
@@ -110,6 +122,10 @@ Describe 'PSInfisical Module' {
             'Set-InfisicalSecret'
             'Remove-InfisicalSecret'
             'Get-InfisicalSecretVersion'
+            'Get-InfisicalFolder'
+            'New-InfisicalFolder'
+            'Set-InfisicalFolder'
+            'Remove-InfisicalFolder'
         ) {
             $cmd = Get-Command $_
             $cmd.OutputType | Should -Not -BeNullOrEmpty

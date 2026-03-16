@@ -25,6 +25,21 @@ function Get-InfisicalSecrets {
     .PARAMETER Recursive
         Include secrets from sub-paths.
 
+    .PARAMETER ExpandSecretReferences
+        Expand secret reference expressions (e.g., ${SECRET_NAME}) in values.
+
+    .PARAMETER IncludeImports
+        Include secrets imported from other environments/paths.
+
+    .PARAMETER IncludePersonalOverrides
+        Include personal secret overrides in addition to shared secrets.
+
+    .PARAMETER TagSlugs
+        Filter secrets server-side by tag slugs. Only secrets with matching tags are returned.
+
+    .PARAMETER MetadataFilter
+        Filter secrets server-side by metadata key-value pairs.
+
     .PARAMETER Filter
         A scriptblock for client-side filtering, e.g. { $_.Name -like "DB_*" }.
 
@@ -76,6 +91,21 @@ function Get-InfisicalSecrets {
         [switch] $Recursive,
 
         [Parameter()]
+        [switch] $ExpandSecretReferences,
+
+        [Parameter()]
+        [switch] $IncludeImports,
+
+        [Parameter()]
+        [switch] $IncludePersonalOverrides,
+
+        [Parameter()]
+        [string[]] $TagSlugs,
+
+        [Parameter()]
+        [hashtable] $MetadataFilter,
+
+        [Parameter()]
         [scriptblock] $Filter,
 
         [Parameter()]
@@ -97,7 +127,32 @@ function Get-InfisicalSecrets {
         $queryParams['recursive'] = 'true'
     }
 
-    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v3/secrets/raw' -QueryParameters $queryParams -Session $session
+    if ($ExpandSecretReferences.IsPresent) {
+        $queryParams['expandSecretReferences'] = 'true'
+    }
+
+    if ($IncludeImports.IsPresent) {
+        $queryParams['includeImports'] = 'true'
+    }
+
+    if ($IncludePersonalOverrides.IsPresent) {
+        $queryParams['includePersonalOverrides'] = 'true'
+    }
+
+    if ($null -ne $TagSlugs -and $TagSlugs.Count -gt 0) {
+        $queryParams['tagSlugs'] = $TagSlugs -join ','
+    }
+
+    if ($null -ne $MetadataFilter -and $MetadataFilter.Count -gt 0) {
+        # metadataFilter uses key=value comma-separated format
+        $filterParts = [System.Collections.Generic.List[string]]::new()
+        foreach ($key in $MetadataFilter.Keys) {
+            $filterParts.Add("$key=$($MetadataFilter[$key])")
+        }
+        $queryParams['metadataFilter'] = $filterParts -join ','
+    }
+
+    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v4/secrets/raw' -QueryParameters $queryParams -Session $session
 
     if ($null -eq $response -or $null -eq $response.secrets) {
         if ($AsHashtable.IsPresent) {

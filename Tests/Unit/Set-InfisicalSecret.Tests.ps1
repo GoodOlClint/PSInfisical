@@ -44,6 +44,56 @@ Describe 'Set-InfisicalSecret' {
         }
     }
 
+    Context 'v4 parameters' {
+        It 'Passes -TagIds through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.tagIds | Should -HaveCount 2
+                return Get-SampleSecretResponse -Name 'TAGGED' -Value 'val' -Version 2
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { Set-InfisicalSecret -Name 'TAGGED' -Value $value -TagIds @('tag-001', 'tag-002') -Confirm:$false } | Should -Not -Throw
+        }
+
+        It 'Passes -NewName through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.newSecretName | Should -Be 'RENAMED_SECRET'
+                return Get-SampleSecretResponse -Name 'RENAMED_SECRET' -Value 'val' -Version 2
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { Set-InfisicalSecret -Name 'OLD_NAME' -Value $value -NewName 'RENAMED_SECRET' -Confirm:$false } | Should -Not -Throw
+        }
+
+        It 'Passes -Type through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.type | Should -Be 'personal'
+                return Get-SampleSecretResponse -Name 'PERSONAL' -Value 'val' -Version 2
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { Set-InfisicalSecret -Name 'PERSONAL' -Value $value -Type 'personal' -Confirm:$false } | Should -Not -Throw
+        }
+
+        It 'Passes -Metadata through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.secretMetadata | Should -Not -BeNullOrEmpty
+                return Get-SampleSecretResponse -Name 'META' -Value 'val' -Version 2
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { Set-InfisicalSecret -Name 'META' -Value $value -Metadata @{ team = 'infra' } -Confirm:$false } | Should -Not -Throw
+        }
+    }
+
     Context '-WhatIf' {
         It 'Does not call API with -WhatIf' {
             Mock Invoke-RestMethod {

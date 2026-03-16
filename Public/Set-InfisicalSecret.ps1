@@ -38,6 +38,24 @@ function Set-InfisicalSecret {
     .PARAMETER SkipMultilineEncoding
         Skip encoding for multiline secret values.
 
+    .PARAMETER TagIds
+        An array of tag IDs to attach to the secret.
+
+    .PARAMETER Metadata
+        A hashtable of key-value metadata pairs to set on the secret.
+
+    .PARAMETER ReminderRepeatDays
+        Interval for secret rotation reminders, measured in days.
+
+    .PARAMETER ReminderNote
+        A note to include in rotation reminder notification emails.
+
+    .PARAMETER NewName
+        Rename the secret to this new name.
+
+    .PARAMETER Type
+        The secret type: 'shared' (default) or 'personal'.
+
     .PARAMETER PassThru
         Return the updated InfisicalSecret object.
 
@@ -99,6 +117,27 @@ function Set-InfisicalSecret {
         [switch] $SkipMultilineEncoding,
 
         [Parameter()]
+        [string[]] $TagIds,
+
+        [Parameter()]
+        [hashtable] $Metadata,
+
+        [Parameter()]
+        [ValidateRange(1, 365)]
+        [int] $ReminderRepeatDays,
+
+        [Parameter()]
+        [ValidateLength(0, 1024)]
+        [string] $ReminderNote,
+
+        [Parameter()]
+        [string] $NewName,
+
+        [Parameter()]
+        [ValidateSet('shared', 'personal')]
+        [string] $Type,
+
+        [Parameter()]
         [switch] $PassThru
     )
 
@@ -118,10 +157,25 @@ function Set-InfisicalSecret {
         $resolvedEnvironment = if ([string]::IsNullOrEmpty($Environment)) { $session.DefaultEnvironment } else { $Environment }
 
         if ($PSCmdlet.ShouldProcess("Updating secret '$Name' in path '$SecretPath' (environment: $resolvedEnvironment)")) {
-            $body = ConvertTo-InfisicalBody -Session $session -Environment $Environment -SecretPath $SecretPath -ProjectId $ProjectId -SecretValue $Value -Comment $Comment -SkipMultilineEncoding:$SkipMultilineEncoding
+            $bodyParams = @{
+                Session              = $session
+                Environment          = $Environment
+                SecretPath           = $SecretPath
+                ProjectId            = $ProjectId
+                SecretValue          = $Value
+                Comment              = $Comment
+                SkipMultilineEncoding = $SkipMultilineEncoding
+            }
+            if ($null -ne $TagIds -and $TagIds.Count -gt 0)                { $bodyParams['TagIds'] = $TagIds }
+            if ($null -ne $Metadata -and $Metadata.Count -gt 0)            { $bodyParams['SecretMetadata'] = $Metadata }
+            if ($PSBoundParameters.ContainsKey('ReminderRepeatDays'))       { $bodyParams['ReminderRepeatDays'] = $ReminderRepeatDays }
+            if (-not [string]::IsNullOrEmpty($ReminderNote))               { $bodyParams['ReminderNote'] = $ReminderNote }
+            if (-not [string]::IsNullOrEmpty($NewName))                    { $bodyParams['NewSecretName'] = $NewName }
+            if (-not [string]::IsNullOrEmpty($Type))                       { $bodyParams['Type'] = $Type }
+            $body = ConvertTo-InfisicalBody @bodyParams
 
             $encodedName = [System.Uri]::EscapeDataString($Name)
-            $response = Invoke-InfisicalApi -Method PATCH -Endpoint "/api/v3/secrets/raw/$encodedName" -Body $body -Session $session
+            $response = Invoke-InfisicalApi -Method PATCH -Endpoint "/api/v4/secrets/raw/$encodedName" -Body $body -Session $session
 
             if ($PassThru.IsPresent -and $null -ne $response -and $null -ne $response.secret) {
                 $resolvedProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }

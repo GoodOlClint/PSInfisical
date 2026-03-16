@@ -39,7 +39,7 @@ function New-MockSession {
     return $session
 }
 
-# Sample API response for a single secret (as returned by /v3/secrets/raw/{name})
+# Sample API response for a single secret (as returned by /v4/secrets/raw/{name})
 function Get-SampleSecretResponse {
     param(
         [string] $Name = 'TEST_SECRET',
@@ -48,67 +48,162 @@ function Get-SampleSecretResponse {
     )
     return @{
         secret = @{
-            id              = 'sec-abc-123'
-            _id             = 'sec-abc-123'
-            workspace       = 'test-project-id'
-            environment     = 'dev'
-            secretKey       = $Name
-            secretValue     = $Value
-            secretComment   = 'Test comment'
-            secretPath      = '/'
-            version         = $Version
-            type            = 'shared'
-            createdAt       = '2024-01-15T10:30:00Z'
-            updatedAt       = '2024-01-15T10:30:00Z'
+            id                        = 'sec-abc-123'
+            _id                       = 'sec-abc-123'
+            workspace                 = 'test-project-id'
+            environment               = 'dev'
+            secretKey                 = $Name
+            secretValue               = $Value
+            secretComment             = 'Test comment'
+            secretPath                = '/'
+            version                   = $Version
+            type                      = 'shared'
+            tags                      = @()
+            secretMetadata            = @()
+            secretReminderRepeatDays  = $null
+            secretReminderNote        = $null
+            createdAt                 = '2024-01-15T10:30:00Z'
+            updatedAt                 = '2024-01-15T10:30:00Z'
         }
     }
 }
 
-# Sample API response for listing multiple secrets (as returned by /v3/secrets/raw)
+# Sample API response for a secret with v4 metadata (tags, metadata, reminders)
+function Get-SampleSecretResponseWithMetadata {
+    param(
+        [string] $Name = 'TAGGED_SECRET',
+        [string] $Value = 'tagged-value'
+    )
+    return @{
+        secret = @{
+            id                        = 'sec-meta-001'
+            _id                       = 'sec-meta-001'
+            workspace                 = 'test-project-id'
+            environment               = 'dev'
+            secretKey                 = $Name
+            secretValue               = $Value
+            secretComment             = 'Has metadata'
+            secretPath                = '/'
+            version                   = 1
+            type                      = 'personal'
+            tags                      = @(
+                @{ id = 'tag-001'; slug = 'production'; color = '#FF0000' }
+                @{ id = 'tag-002'; slug = 'database'; color = '#00FF00' }
+            )
+            secretMetadata            = @(
+                @{ key = 'team'; value = 'backend' }
+                @{ key = 'rotation'; value = 'quarterly' }
+            )
+            secretReminderRepeatDays  = 90
+            secretReminderNote        = 'Rotate this secret quarterly'
+            createdAt                 = '2024-01-15T10:30:00Z'
+            updatedAt                 = '2024-01-15T10:30:00Z'
+        }
+    }
+}
+
+# Sample API response for listing multiple secrets (as returned by /v4/secrets/raw)
 function Get-SampleSecretsListResponse {
     return @{
         secrets = @(
             @{
-                id            = 'sec-001'
-                _id           = 'sec-001'
-                workspace     = 'test-project-id'
-                environment   = 'dev'
-                secretKey     = 'DB_HOST'
-                secretValue   = 'localhost'
-                secretComment = ''
-                secretPath    = '/'
-                version       = 3
-                type          = 'shared'
-                createdAt     = '2024-01-10T08:00:00Z'
-                updatedAt     = '2024-01-14T12:00:00Z'
+                id                       = 'sec-001'
+                _id                      = 'sec-001'
+                workspace                = 'test-project-id'
+                environment              = 'dev'
+                secretKey                = 'DB_HOST'
+                secretValue              = 'localhost'
+                secretComment            = ''
+                secretPath               = '/'
+                version                  = 3
+                type                     = 'shared'
+                tags                     = @()
+                secretMetadata           = @()
+                secretReminderRepeatDays = $null
+                secretReminderNote       = $null
+                createdAt                = '2024-01-10T08:00:00Z'
+                updatedAt                = '2024-01-14T12:00:00Z'
             },
             @{
-                id            = 'sec-002'
-                _id           = 'sec-002'
-                workspace     = 'test-project-id'
-                environment   = 'dev'
-                secretKey     = 'DB_PORT'
-                secretValue   = '5432'
-                secretComment = 'PostgreSQL default port'
-                secretPath    = '/'
-                version       = 1
-                type          = 'shared'
-                createdAt     = '2024-01-10T08:00:00Z'
-                updatedAt     = '2024-01-10T08:00:00Z'
+                id                       = 'sec-002'
+                _id                      = 'sec-002'
+                workspace                = 'test-project-id'
+                environment              = 'dev'
+                secretKey                = 'DB_PORT'
+                secretValue              = '5432'
+                secretComment            = 'PostgreSQL default port'
+                secretPath               = '/'
+                version                  = 1
+                type                     = 'shared'
+                tags                     = @()
+                secretMetadata           = @()
+                secretReminderRepeatDays = $null
+                secretReminderNote       = $null
+                createdAt                = '2024-01-10T08:00:00Z'
+                updatedAt                = '2024-01-10T08:00:00Z'
             },
             @{
-                id            = 'sec-003'
-                _id           = 'sec-003'
-                workspace     = 'test-project-id'
-                environment   = 'dev'
-                secretKey     = 'API_KEY'
-                secretValue   = 'sk-test-key'
-                secretComment = ''
-                secretPath    = '/'
-                version       = 2
-                type          = 'shared'
-                createdAt     = '2024-01-11T09:00:00Z'
-                updatedAt     = '2024-01-13T15:00:00Z'
+                id                       = 'sec-003'
+                _id                      = 'sec-003'
+                workspace                = 'test-project-id'
+                environment              = 'dev'
+                secretKey                = 'API_KEY'
+                secretValue              = 'sk-test-key'
+                secretComment            = ''
+                secretPath               = '/'
+                version                  = 2
+                type                     = 'shared'
+                tags                     = @(@{ id = 'tag-001'; slug = 'api'; color = '#0000FF' })
+                secretMetadata           = @(@{ key = 'owner'; value = 'platform-team' })
+                secretReminderRepeatDays = $null
+                secretReminderNote       = $null
+                createdAt                = '2024-01-11T09:00:00Z'
+                updatedAt                = '2024-01-13T15:00:00Z'
+            }
+        )
+    }
+}
+
+# Sample API response for a single folder (as returned by /v2/folders/{id})
+function Get-SampleFolderResponse {
+    param(
+        [string] $Name = 'test-folder',
+        [string] $Id = 'folder-abc-123'
+    )
+    return @{
+        folder = @{
+            id          = $Id
+            name        = $Name
+            environment = 'dev'
+            path        = '/'
+            description = 'Test folder'
+            createdAt   = '2024-02-01T10:00:00Z'
+            updatedAt   = '2024-02-01T10:00:00Z'
+        }
+    }
+}
+
+# Sample API response for listing folders (as returned by /v2/folders)
+function Get-SampleFoldersListResponse {
+    return @{
+        folders = @(
+            @{
+                id          = 'folder-001'
+                name        = 'database'
+                environment = 'dev'
+                path        = '/'
+                description = 'Database secrets'
+                createdAt   = '2024-02-01T10:00:00Z'
+                updatedAt   = '2024-02-01T10:00:00Z'
+            },
+            @{
+                id          = 'folder-002'
+                name        = 'api-keys'
+                environment = 'dev'
+                path        = '/'
+                description = ''
+                createdAt   = '2024-02-02T08:00:00Z'
+                updatedAt   = '2024-02-02T08:00:00Z'
             }
         )
     }

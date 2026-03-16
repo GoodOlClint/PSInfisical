@@ -25,6 +25,9 @@ function Remove-InfisicalSecret {
     .PARAMETER ProjectId
         The project/workspace ID. Overrides the session default if specified.
 
+    .PARAMETER Type
+        The secret type to delete: 'shared' (default) or 'personal'.
+
     .EXAMPLE
         Remove-InfisicalSecret -Name 'OLD_API_KEY' -Confirm:$false
 
@@ -64,7 +67,11 @@ function Remove-InfisicalSecret {
         [string] $SecretPath = '/',
 
         [Parameter(ValueFromPipelineByPropertyName)]
-        [string] $ProjectId
+        [string] $ProjectId,
+
+        [Parameter()]
+        [ValidateSet('shared', 'personal')]
+        [string] $Type
     )
 
     process {
@@ -73,10 +80,17 @@ function Remove-InfisicalSecret {
         $resolvedEnvironment = if ([string]::IsNullOrEmpty($Environment)) { $session.DefaultEnvironment } else { $Environment }
 
         if ($PSCmdlet.ShouldProcess("Removing secret '$Name' from path '$SecretPath' (environment: $resolvedEnvironment)")) {
-            $body = ConvertTo-InfisicalBody -Session $session -Environment $Environment -SecretPath $SecretPath -ProjectId $ProjectId
+            $bodyParams = @{
+                Session     = $session
+                Environment = $Environment
+                SecretPath  = $SecretPath
+                ProjectId   = $ProjectId
+            }
+            if (-not [string]::IsNullOrEmpty($Type)) { $bodyParams['Type'] = $Type }
+            $body = ConvertTo-InfisicalBody @bodyParams
 
             $encodedName = [System.Uri]::EscapeDataString($Name)
-            $response = Invoke-InfisicalApi -Method DELETE -Endpoint "/api/v3/secrets/raw/$encodedName" -Body $body -Session $session
+            $response = Invoke-InfisicalApi -Method DELETE -Endpoint "/api/v4/secrets/raw/$encodedName" -Body $body -Session $session
 
             if ($null -eq $response) {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(

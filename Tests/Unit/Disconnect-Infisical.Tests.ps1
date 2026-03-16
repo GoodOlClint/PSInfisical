@@ -13,6 +13,12 @@ BeforeAll {
 
 Describe 'Disconnect-Infisical' {
 
+    BeforeAll {
+        Mock Test-InfisicalApiCapability {
+            return @{ SecretsV4 = $true; SecretsV3 = $true }
+        } -ModuleName PSInfisical
+    }
+
     Context 'With active session' {
         BeforeEach {
             $token = New-TestSecureString -PlainText 'test-token'

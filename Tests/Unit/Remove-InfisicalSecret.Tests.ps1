@@ -30,6 +30,19 @@ Describe 'Remove-InfisicalSecret' {
         }
     }
 
+    Context 'v4 parameters' {
+        It 'Passes -Type through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.type | Should -Be 'personal'
+                return Get-SampleSecretResponse -Name 'PERSONAL'
+            } -ModuleName PSInfisical
+
+            { Remove-InfisicalSecret -Name 'PERSONAL' -Type 'personal' -Confirm:$false } | Should -Not -Throw
+        }
+    }
+
     Context 'Pipeline input' {
         It 'Accepts pipeline input from Get-InfisicalSecrets' {
             Mock Invoke-RestMethod {

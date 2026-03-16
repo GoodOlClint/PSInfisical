@@ -38,6 +38,11 @@ Describe 'PSInfisical.Extension' {
     }
 
     BeforeEach {
+        # Mock capability probe to avoid real HTTP calls during tests
+        Mock Test-InfisicalApiCapability {
+            return @{ SecretsV4 = $true; SecretsV3 = $true }
+        } -ModuleName PSInfisical
+
         # Clear session cache and module session before each test.
         # Use InModuleScope — the combination of 'using module' and Pester 5
         # scope isolation prevents '& (Get-Module ...)' from working reliably.

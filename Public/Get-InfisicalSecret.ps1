@@ -89,7 +89,7 @@ function Get-InfisicalSecret {
     }
 
     $encodedName = [System.Uri]::EscapeDataString($Name)
-    $response = Invoke-InfisicalApi -Method GET -Endpoint "/api/v3/secrets/raw/$encodedName" -QueryParameters $queryParams -Session $session
+    $response = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/raw/$encodedName" -QueryParameters $queryParams -Session $session
 
     if ($null -eq $response -or $null -eq $response.secret) {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(

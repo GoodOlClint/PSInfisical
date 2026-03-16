@@ -62,6 +62,9 @@ function Invoke-InfisicalApi {
         $invokeParams['ContentType'] = 'application/json'
     }
 
+    # Check API version compatibility before making the call
+    Assert-InfisicalApiVersion -Endpoint $Endpoint -Session $Session
+
     # Verbose logging — endpoint and method only, never secrets or tokens
     Write-Verbose "Invoke-InfisicalApi: $Method $Endpoint"
 

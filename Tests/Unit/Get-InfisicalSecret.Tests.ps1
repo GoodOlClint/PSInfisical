@@ -58,6 +58,24 @@ Describe 'Get-InfisicalSecret' {
         }
     }
 
+    Context 'v4 properties on returned object' {
+        It 'Returns TagIds, Metadata, and Type from API response' {
+            Mock Invoke-RestMethod {
+                return Get-SampleSecretResponseWithMetadata -Name 'TAGGED_SECRET' -Value 'val'
+            } -ModuleName PSInfisical
+
+            $result = Get-InfisicalSecret -Name 'TAGGED_SECRET'
+
+            $result.TagIds | Should -HaveCount 2
+            $result.TagIds[0] | Should -Be 'tag-001'
+            $result.Metadata.Keys | Should -Contain 'team'
+            $result.Metadata['team'] | Should -Be 'backend'
+            $result.ReminderRepeatDays | Should -Be 90
+            $result.ReminderNote | Should -Be 'Rotate this secret quarterly'
+            $result.Type | Should -Be 'personal'
+        }
+    }
+
     Context 'Secret not found' {
         It 'Writes non-terminating error when secret not found (404)' {
             Mock Invoke-RestMethod {

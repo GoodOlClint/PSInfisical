@@ -69,6 +69,71 @@ Describe 'New-InfisicalSecret' {
         }
     }
 
+    Context 'v4 parameters' {
+        It 'Passes -TagIds through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.tagIds | Should -HaveCount 2
+                return Get-SampleSecretResponse -Name 'TAGGED' -Value 'val'
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { New-InfisicalSecret -Name 'TAGGED' -Value $value -TagIds @('tag-001', 'tag-002') -Confirm:$false } | Should -Not -Throw
+        }
+
+        It 'Passes -Metadata through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.secretMetadata | Should -Not -BeNullOrEmpty
+                return Get-SampleSecretResponse -Name 'META' -Value 'val'
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { New-InfisicalSecret -Name 'META' -Value $value -Metadata @{ team = 'backend' } -Confirm:$false } | Should -Not -Throw
+        }
+
+        It 'Passes -Type through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.type | Should -Be 'personal'
+                return Get-SampleSecretResponse -Name 'PERSONAL' -Value 'val'
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { New-InfisicalSecret -Name 'PERSONAL' -Value $value -Type 'personal' -Confirm:$false } | Should -Not -Throw
+        }
+
+        It 'Passes -ReminderRepeatDays and -ReminderNote through to API body' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                $parsed = $Body | ConvertFrom-Json
+                $parsed.secretReminderRepeatDays | Should -Be 30
+                $parsed.secretReminderNote | Should -Be 'Rotate monthly'
+                return Get-SampleSecretResponse -Name 'REMIND' -Value 'val'
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            { New-InfisicalSecret -Name 'REMIND' -Value $value -ReminderRepeatDays 30 -ReminderNote 'Rotate monthly' -Confirm:$false } | Should -Not -Throw
+        }
+
+        It '-PassThru returns v4 metadata properties' {
+            Mock Invoke-RestMethod {
+                return Get-SampleSecretResponseWithMetadata -Name 'FULL_META' -Value 'val'
+            } -ModuleName PSInfisical
+
+            $value = New-TestSecureString -PlainText 'val'
+            $result = New-InfisicalSecret -Name 'FULL_META' -Value $value -PassThru -Confirm:$false
+
+            $result.TagIds | Should -HaveCount 2
+            $result.Metadata.Keys | Should -Contain 'team'
+            $result.ReminderRepeatDays | Should -Be 90
+            $result.Type | Should -Be 'personal'
+        }
+    }
+
     Context 'Error handling' {
         It 'Throws if API returns error (e.g. secret already exists)' {
             Mock Invoke-RestMethod {
