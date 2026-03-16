@@ -209,6 +209,93 @@ function Get-SampleFoldersListResponse {
     }
 }
 
+# Sample API response for a single tag (as returned by /v1/projects/{id}/tags/{id})
+function Get-SampleTagResponse {
+    param(
+        [string] $Slug = 'production',
+        [string] $Id = 'tag-abc-123',
+        [string] $Color = '#FF0000'
+    )
+    return @{
+        tag = @{
+            id        = $Id
+            name      = $Slug
+            slug      = $Slug
+            color     = $Color
+            createdAt = '2024-03-01T10:00:00Z'
+            updatedAt = '2024-03-01T10:00:00Z'
+        }
+    }
+}
+
+# Sample API response for listing tags (as returned by /v1/projects/{id}/tags)
+function Get-SampleTagsListResponse {
+    return @{
+        tags = @(
+            @{
+                id        = 'tag-001'
+                name      = 'production'
+                slug      = 'production'
+                color     = '#FF0000'
+                createdAt = '2024-03-01T10:00:00Z'
+                updatedAt = '2024-03-01T10:00:00Z'
+            },
+            @{
+                id        = 'tag-002'
+                name      = 'database'
+                slug      = 'database'
+                color     = '#00FF00'
+                createdAt = '2024-03-02T08:00:00Z'
+                updatedAt = '2024-03-02T08:00:00Z'
+            }
+        )
+    }
+}
+
+# Sample API response for a single secret import (as returned by /v2/secret-imports)
+function Get-SampleSecretImportResponse {
+    param(
+        [string] $Id = 'import-abc-123'
+    )
+    return @{
+        secretImport = @{
+            id            = $Id
+            importPath    = '/shared'
+            importEnv     = @{ slug = 'prod'; name = 'Production' }
+            position      = 1
+            isReplication = $false
+            createdAt     = '2024-04-01T10:00:00Z'
+            updatedAt     = '2024-04-01T10:00:00Z'
+        }
+    }
+}
+
+# Sample API response for listing secret imports
+function Get-SampleSecretImportsListResponse {
+    return @{
+        secretImports = @(
+            @{
+                id            = 'import-001'
+                importPath    = '/shared'
+                importEnv     = @{ slug = 'prod'; name = 'Production' }
+                position      = 1
+                isReplication = $false
+                createdAt     = '2024-04-01T10:00:00Z'
+                updatedAt     = '2024-04-01T10:00:00Z'
+            },
+            @{
+                id            = 'import-002'
+                importPath    = '/common'
+                importEnv     = @{ slug = 'staging'; name = 'Staging' }
+                position      = 2
+                isReplication = $true
+                createdAt     = '2024-04-02T08:00:00Z'
+                updatedAt     = '2024-04-02T08:00:00Z'
+            }
+        )
+    }
+}
+
 # Sample auth response (as returned by /v1/auth/universal-auth/login)
 function Get-SampleAuthResponse {
     return @{

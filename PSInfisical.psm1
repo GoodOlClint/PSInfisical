@@ -145,6 +145,42 @@ class InfisicalFolder {
     }
 }
 
+class InfisicalTag {
+    [string] $Id
+    [string] $Name
+    [string] $Slug
+    [string] $Color
+    [string] $ProjectId
+    [datetime] $CreatedAt
+    [datetime] $UpdatedAt
+
+    InfisicalTag() { }
+
+    [string] ToString() {
+        return "InfisicalTag: $($this.Slug) ($($this.Color))"
+    }
+}
+
+class InfisicalSecretImport {
+    [string] $Id
+    [string] $SourceEnvironment
+    [string] $SourcePath
+    [string] $Environment          # Destination environment
+    [string] $Path                 # Destination path
+    [string] $ProjectId
+    [bool] $IsReplication
+    [int] $Position
+    [datetime] $CreatedAt
+    [datetime] $UpdatedAt
+
+    InfisicalSecretImport() { }
+
+    [string] ToString() {
+        $repl = if ($this.IsReplication) { ' [replication]' } else { '' }
+        return "InfisicalSecretImport: $($this.SourceEnvironment):$($this.SourcePath) -> $($this.Environment):$($this.Path)$repl"
+    }
+}
+
 # --- Register type accelerators ---
 # PowerShell classes defined in a module are NOT visible as type literals
 # (e.g. [InfisicalSession]) when dot-sourcing function files within the same
@@ -156,6 +192,8 @@ $script:TypeAcceleratorsType = [psobject].Assembly.GetType('System.Management.Au
     @{ Name = 'InfisicalSession'; Type = [InfisicalSession] }
     @{ Name = 'InfisicalSecret';  Type = [InfisicalSecret] }
     @{ Name = 'InfisicalFolder';  Type = [InfisicalFolder] }
+    @{ Name = 'InfisicalTag';     Type = [InfisicalTag] }
+    @{ Name = 'InfisicalSecretImport'; Type = [InfisicalSecretImport] }
 ) | ForEach-Object {
     if (-not $script:TypeAcceleratorsType::Get.ContainsKey($_.Name)) {
         $script:TypeAcceleratorsType::Add($_.Name, $_.Type)
@@ -165,7 +203,7 @@ $script:TypeAcceleratorsType = [psobject].Assembly.GetType('System.Management.Au
 # Clean up type accelerators when the module is removed to avoid leaking
 # into the session after Remove-Module.
 $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
-    @('InfisicalSession', 'InfisicalSecret', 'InfisicalFolder') | ForEach-Object {
+    @('InfisicalSession', 'InfisicalSecret', 'InfisicalFolder', 'InfisicalTag', 'InfisicalSecretImport') | ForEach-Object {
         if ($script:TypeAcceleratorsType::Get.ContainsKey($_)) {
             $script:TypeAcceleratorsType::Remove($_)
         }

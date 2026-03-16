@@ -44,6 +44,17 @@ Describe 'PSInfisical Module' {
                 'New-InfisicalFolder'
                 'Set-InfisicalFolder'
                 'Remove-InfisicalFolder'
+                'Get-InfisicalTag'
+                'New-InfisicalTag'
+                'Set-InfisicalTag'
+                'Remove-InfisicalTag'
+                'Get-InfisicalSecretImport'
+                'New-InfisicalSecretImport'
+                'Set-InfisicalSecretImport'
+                'Remove-InfisicalSecretImport'
+                'New-InfisicalSecretBulk'
+                'Set-InfisicalSecretBulk'
+                'Remove-InfisicalSecretBulk'
             )
             $module = Get-Module -Name PSInfisical
         }
@@ -88,6 +99,17 @@ Describe 'PSInfisical Module' {
             'New-InfisicalFolder'
             'Set-InfisicalFolder'
             'Remove-InfisicalFolder'
+            'Get-InfisicalTag'
+            'New-InfisicalTag'
+            'Set-InfisicalTag'
+            'Remove-InfisicalTag'
+            'Get-InfisicalSecretImport'
+            'New-InfisicalSecretImport'
+            'Set-InfisicalSecretImport'
+            'Remove-InfisicalSecretImport'
+            'New-InfisicalSecretBulk'
+            'Set-InfisicalSecretBulk'
+            'Remove-InfisicalSecretBulk'
         ) {
             $help = Get-Help $_
             $help.Synopsis | Should -Not -BeNullOrEmpty
@@ -106,6 +128,17 @@ Describe 'PSInfisical Module' {
             'New-InfisicalFolder'
             'Set-InfisicalFolder'
             'Remove-InfisicalFolder'
+            'Get-InfisicalTag'
+            'New-InfisicalTag'
+            'Set-InfisicalTag'
+            'Remove-InfisicalTag'
+            'Get-InfisicalSecretImport'
+            'New-InfisicalSecretImport'
+            'Set-InfisicalSecretImport'
+            'Remove-InfisicalSecretImport'
+            'New-InfisicalSecretBulk'
+            'Set-InfisicalSecretBulk'
+            'Remove-InfisicalSecretBulk'
         ) {
             $help = Get-Help $_
             $help.examples.example.Count | Should -BeGreaterOrEqual 1
@@ -126,6 +159,17 @@ Describe 'PSInfisical Module' {
             'New-InfisicalFolder'
             'Set-InfisicalFolder'
             'Remove-InfisicalFolder'
+            'Get-InfisicalTag'
+            'New-InfisicalTag'
+            'Set-InfisicalTag'
+            'Remove-InfisicalTag'
+            'Get-InfisicalSecretImport'
+            'New-InfisicalSecretImport'
+            'Set-InfisicalSecretImport'
+            'Remove-InfisicalSecretImport'
+            'New-InfisicalSecretBulk'
+            'Set-InfisicalSecretBulk'
+            'Remove-InfisicalSecretBulk'
         ) {
             $cmd = Get-Command $_
             $cmd.OutputType | Should -Not -BeNullOrEmpty

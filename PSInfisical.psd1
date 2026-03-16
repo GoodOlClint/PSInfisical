@@ -41,6 +41,17 @@
         'New-InfisicalFolder'
         'Set-InfisicalFolder'
         'Remove-InfisicalFolder'
+        'Get-InfisicalTag'
+        'New-InfisicalTag'
+        'Set-InfisicalTag'
+        'Remove-InfisicalTag'
+        'Get-InfisicalSecretImport'
+        'New-InfisicalSecretImport'
+        'Set-InfisicalSecretImport'
+        'Remove-InfisicalSecretImport'
+        'New-InfisicalSecretBulk'
+        'Set-InfisicalSecretBulk'
+        'Remove-InfisicalSecretBulk'
     )
 
     # Cmdlets to export from this module

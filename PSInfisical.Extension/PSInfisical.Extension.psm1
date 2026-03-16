@@ -92,6 +92,31 @@ function Get-OrCreateSession {
     elseif ($AdditionalParameters.ContainsKey('AccessToken')) {
         $connectParams['AccessToken'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['AccessToken']
     }
+    elseif ($AdditionalParameters.ContainsKey('AWSIdentityDocument')) {
+        $connectParams['AWSIdentityDocument'] = $AdditionalParameters['AWSIdentityDocument']
+    }
+    elseif ($AdditionalParameters.ContainsKey('AzureJwt')) {
+        $connectParams['AzureJwt'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['AzureJwt']
+    }
+    elseif ($AdditionalParameters.ContainsKey('GCPIdentityToken')) {
+        $connectParams['GCPIdentityToken'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['GCPIdentityToken']
+    }
+    elseif ($AdditionalParameters.ContainsKey('KubernetesServiceAccountToken') -and $AdditionalParameters.ContainsKey('KubernetesIdentityId')) {
+        $connectParams['KubernetesServiceAccountToken'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['KubernetesServiceAccountToken']
+        $connectParams['KubernetesIdentityId'] = $AdditionalParameters['KubernetesIdentityId']
+    }
+    elseif ($AdditionalParameters.ContainsKey('OIDCToken') -and $AdditionalParameters.ContainsKey('OIDCIdentityId')) {
+        $connectParams['OIDCToken'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['OIDCToken']
+        $connectParams['OIDCIdentityId'] = $AdditionalParameters['OIDCIdentityId']
+    }
+    elseif ($AdditionalParameters.ContainsKey('Jwt') -and $AdditionalParameters.ContainsKey('JwtIdentityId')) {
+        $connectParams['Jwt'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['Jwt']
+        $connectParams['JwtIdentityId'] = $AdditionalParameters['JwtIdentityId']
+    }
+    elseif ($AdditionalParameters.ContainsKey('LDAPUsername') -and $AdditionalParameters.ContainsKey('LDAPPassword')) {
+        $connectParams['LDAPUsername'] = $AdditionalParameters['LDAPUsername']
+        $connectParams['LDAPPassword'] = ConvertTo-SessionSecureString -Value $AdditionalParameters['LDAPPassword']
+    }
     else {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(
             [System.ArgumentException]::new("Vault '$VaultName': VaultParameters must include authentication credentials (ClientId+ClientSecret, Token, or AccessToken)."),

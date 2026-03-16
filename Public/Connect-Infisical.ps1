@@ -84,6 +84,57 @@ function Connect-Infisical {
         [ValidateNotNull()]
         [System.Security.SecureString] $AccessToken,
 
+        # AWS Auth
+        [Parameter(Mandatory, ParameterSetName = 'AWSAuth')]
+        [ValidateNotNullOrEmpty()]
+        [string] $AWSIdentityDocument,
+
+        # Azure Auth
+        [Parameter(Mandatory, ParameterSetName = 'AzureAuth')]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $AzureJwt,
+
+        # GCP Auth
+        [Parameter(Mandatory, ParameterSetName = 'GCPAuth')]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $GCPIdentityToken,
+
+        # Kubernetes Auth
+        [Parameter(Mandatory, ParameterSetName = 'KubernetesAuth')]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $KubernetesServiceAccountToken,
+
+        [Parameter(Mandatory, ParameterSetName = 'KubernetesAuth')]
+        [ValidateNotNullOrEmpty()]
+        [string] $KubernetesIdentityId,
+
+        # OIDC Auth
+        [Parameter(Mandatory, ParameterSetName = 'OIDCAuth')]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $OIDCToken,
+
+        [Parameter(Mandatory, ParameterSetName = 'OIDCAuth')]
+        [ValidateNotNullOrEmpty()]
+        [string] $OIDCIdentityId,
+
+        # JWT Auth
+        [Parameter(Mandatory, ParameterSetName = 'JWTAuth')]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $Jwt,
+
+        [Parameter(Mandatory, ParameterSetName = 'JWTAuth')]
+        [ValidateNotNullOrEmpty()]
+        [string] $JwtIdentityId,
+
+        # LDAP Auth
+        [Parameter(Mandatory, ParameterSetName = 'LDAPAuth')]
+        [ValidateNotNullOrEmpty()]
+        [string] $LDAPUsername,
+
+        [Parameter(Mandatory, ParameterSetName = 'LDAPAuth')]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $LDAPPassword,
+
         [Parameter()]
         [ValidateNotNullOrEmpty()]
         [string] $ApiUrl = 'https://app.infisical.com',
@@ -195,6 +246,54 @@ function Connect-Infisical {
                 $session.AccessToken = $AccessToken
                 # Pre-obtained JWTs may expire, but we don't know when without decoding
                 $session.TokenExpiry = $null
+            }
+            'AWSAuth' {
+                $authBody = @{ iamHttpRequestMethod = 'POST'; iamRequestBody = $AWSIdentityDocument }
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'aws-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
+            }
+            'AzureAuth' {
+                $jwt = [System.Net.NetworkCredential]::new('', $AzureJwt).Password
+                $authBody = @{ jwt = $jwt }
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'azure-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
+            }
+            'GCPAuth' {
+                $token = [System.Net.NetworkCredential]::new('', $GCPIdentityToken).Password
+                $authBody = @{ jwt = $token }
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'gcp-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
+            }
+            'KubernetesAuth' {
+                $saToken = [System.Net.NetworkCredential]::new('', $KubernetesServiceAccountToken).Password
+                $authBody = @{ jwt = $saToken; identityId = $KubernetesIdentityId }
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'kubernetes-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
+            }
+            'OIDCAuth' {
+                $oidcJwt = [System.Net.NetworkCredential]::new('', $OIDCToken).Password
+                $authBody = @{ jwt = $oidcJwt; identityId = $OIDCIdentityId }
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'oidc-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
+            }
+            'JWTAuth' {
+                $jwtValue = [System.Net.NetworkCredential]::new('', $Jwt).Password
+                $authBody = @{ jwt = $jwtValue; identityId = $JwtIdentityId }
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'jwt-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
+            }
+            'LDAPAuth' {
+                $ldapPass = [System.Net.NetworkCredential]::new('', $LDAPPassword).Password
+                $authBody = @{ username = $LDAPUsername; password = $ldapPass }
+                $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'ldap-auth' -Body $authBody -PSCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
             }
         }
 
