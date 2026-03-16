@@ -4,7 +4,7 @@
     RootModule        = 'PSInfisical.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.2.0'
+    ModuleVersion     = '0.3.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -68,6 +68,15 @@
         'Get-InfisicalProjectRole'
         'New-InfisicalProjectRole'
         'Remove-InfisicalProjectRole'
+        'Set-InfisicalProjectMember'
+        'Get-InfisicalClientSecret'
+        'Remove-InfisicalClientSecret'
+        'Get-InfisicalIdentityMembership'
+        'New-InfisicalProject'
+        'Remove-InfisicalProject'
+        'New-InfisicalEnvironment'
+        'Set-InfisicalEnvironment'
+        'Remove-InfisicalEnvironment'
     )
 
     # Cmdlets to export from this module

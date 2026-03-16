@@ -439,6 +439,39 @@ function Get-SampleProjectRoleResponse {
     }
 }
 
+# Sample API response for client secret listing
+function Get-SampleClientSecretsListResponse {
+    return @{
+        clientSecretData = @(
+            @{ id = 'cs-001'; description = 'CI runner'; isClientSecretRevoked = $false; createdAt = '2024-06-01T10:00:00Z' }
+            @{ id = 'cs-002'; description = 'Deploy key'; isClientSecretRevoked = $true; createdAt = '2024-05-01T10:00:00Z' }
+        )
+    }
+}
+
+# Sample API response for identity memberships (which projects an identity belongs to)
+function Get-SampleIdentityMembershipsResponse {
+    return @{
+        identityMemberships = @(
+            @{ project = @{ id = 'proj-001'; name = 'Project Alpha' }; role = 'member'; createdAt = '2024-06-01T10:00:00Z' }
+            @{ project = @{ id = 'proj-002'; name = 'Project Beta' }; role = 'viewer'; createdAt = '2024-06-02T08:00:00Z' }
+        )
+    }
+}
+
+# Sample API response for environment creation
+function Get-SampleEnvironmentResponse {
+    param([string] $Slug = 'staging')
+    return @{
+        environment = @{
+            id       = 'env-new-001'
+            name     = 'Staging'
+            slug     = $Slug
+            position = 2
+        }
+    }
+}
+
 # Sample auth response (as returned by /v1/auth/universal-auth/login)
 function Get-SampleAuthResponse {
     return @{

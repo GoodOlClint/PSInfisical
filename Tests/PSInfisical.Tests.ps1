@@ -22,10 +22,10 @@ Describe 'PSInfisical Module' {
             { Test-ModuleManifest -Path $manifestPath -ErrorAction Stop } | Should -Not -Throw
         }
 
-        It 'Manifest version is 0.2.0' {
+        It 'Manifest version is 0.3.0' {
             $manifestPath = Join-Path -Path $PSScriptRoot -ChildPath '../PSInfisical.psd1'
             $manifest = Test-ModuleManifest -Path $manifestPath
-            $manifest.Version.ToString() | Should -Be '0.2.0'
+            $manifest.Version.ToString() | Should -Be '0.3.0'
         }
     }
 
@@ -71,6 +71,15 @@ Describe 'PSInfisical Module' {
                 'Get-InfisicalProjectRole'
                 'New-InfisicalProjectRole'
                 'Remove-InfisicalProjectRole'
+                'Set-InfisicalProjectMember'
+                'Get-InfisicalClientSecret'
+                'Remove-InfisicalClientSecret'
+                'Get-InfisicalIdentityMembership'
+                'New-InfisicalProject'
+                'Remove-InfisicalProject'
+                'New-InfisicalEnvironment'
+                'Set-InfisicalEnvironment'
+                'Remove-InfisicalEnvironment'
             )
             $module = Get-Module -Name PSInfisical
         }
@@ -142,6 +151,15 @@ Describe 'PSInfisical Module' {
             'Get-InfisicalProjectRole'
             'New-InfisicalProjectRole'
             'Remove-InfisicalProjectRole'
+            'Set-InfisicalProjectMember'
+            'Get-InfisicalClientSecret'
+            'Remove-InfisicalClientSecret'
+            'Get-InfisicalIdentityMembership'
+            'New-InfisicalProject'
+            'Remove-InfisicalProject'
+            'New-InfisicalEnvironment'
+            'Set-InfisicalEnvironment'
+            'Remove-InfisicalEnvironment'
         ) {
             $help = Get-Help $_
             $help.Synopsis | Should -Not -BeNullOrEmpty
@@ -187,6 +205,15 @@ Describe 'PSInfisical Module' {
             'Get-InfisicalProjectRole'
             'New-InfisicalProjectRole'
             'Remove-InfisicalProjectRole'
+            'Set-InfisicalProjectMember'
+            'Get-InfisicalClientSecret'
+            'Remove-InfisicalClientSecret'
+            'Get-InfisicalIdentityMembership'
+            'New-InfisicalProject'
+            'Remove-InfisicalProject'
+            'New-InfisicalEnvironment'
+            'Set-InfisicalEnvironment'
+            'Remove-InfisicalEnvironment'
         ) {
             $help = Get-Help $_
             $help.examples.example.Count | Should -BeGreaterOrEqual 1
@@ -234,6 +261,15 @@ Describe 'PSInfisical Module' {
             'Get-InfisicalProjectRole'
             'New-InfisicalProjectRole'
             'Remove-InfisicalProjectRole'
+            'Set-InfisicalProjectMember'
+            'Get-InfisicalClientSecret'
+            'Remove-InfisicalClientSecret'
+            'Get-InfisicalIdentityMembership'
+            'New-InfisicalProject'
+            'Remove-InfisicalProject'
+            'New-InfisicalEnvironment'
+            'Set-InfisicalEnvironment'
+            'Remove-InfisicalEnvironment'
         ) {
             $cmd = Get-Command $_
             $cmd.OutputType | Should -Not -BeNullOrEmpty
