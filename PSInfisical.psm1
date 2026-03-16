@@ -181,6 +181,27 @@ class InfisicalSecretImport {
     }
 }
 
+class InfisicalIdentity {
+    [string] $Id
+    [string] $Name
+    [string] $OrganizationId
+    [string] $Role
+    [string[]] $AuthMethods
+    [bool] $HasDeleteProtection
+    [hashtable] $Metadata
+    [datetime] $CreatedAt
+    [datetime] $UpdatedAt
+
+    InfisicalIdentity() {
+        $this.AuthMethods = @()
+        $this.Metadata = @{}
+    }
+
+    [string] ToString() {
+        return "InfisicalIdentity: $($this.Name) (Role=$($this.Role))"
+    }
+}
+
 # --- Register type accelerators ---
 # PowerShell classes defined in a module are NOT visible as type literals
 # (e.g. [InfisicalSession]) when dot-sourcing function files within the same
@@ -194,6 +215,7 @@ $script:TypeAcceleratorsType = [psobject].Assembly.GetType('System.Management.Au
     @{ Name = 'InfisicalFolder';  Type = [InfisicalFolder] }
     @{ Name = 'InfisicalTag';     Type = [InfisicalTag] }
     @{ Name = 'InfisicalSecretImport'; Type = [InfisicalSecretImport] }
+    @{ Name = 'InfisicalIdentity';     Type = [InfisicalIdentity] }
 ) | ForEach-Object {
     if (-not $script:TypeAcceleratorsType::Get.ContainsKey($_.Name)) {
         $script:TypeAcceleratorsType::Add($_.Name, $_.Type)
@@ -203,7 +225,7 @@ $script:TypeAcceleratorsType = [psobject].Assembly.GetType('System.Management.Au
 # Clean up type accelerators when the module is removed to avoid leaking
 # into the session after Remove-Module.
 $MyInvocation.MyCommand.ScriptBlock.Module.OnRemove = {
-    @('InfisicalSession', 'InfisicalSecret', 'InfisicalFolder', 'InfisicalTag', 'InfisicalSecretImport') | ForEach-Object {
+    @('InfisicalSession', 'InfisicalSecret', 'InfisicalFolder', 'InfisicalTag', 'InfisicalSecretImport', 'InfisicalIdentity') | ForEach-Object {
         if ($script:TypeAcceleratorsType::Get.ContainsKey($_)) {
             $script:TypeAcceleratorsType::Remove($_)
         }

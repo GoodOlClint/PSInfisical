@@ -54,6 +54,20 @@
         'Remove-InfisicalSecretBulk'
         'Get-InfisicalEnvironment'
         'Get-InfisicalProject'
+        'Get-InfisicalIdentity'
+        'New-InfisicalIdentity'
+        'Set-InfisicalIdentity'
+        'Remove-InfisicalIdentity'
+        'Add-InfisicalIdentityAuth'
+        'Get-InfisicalIdentityAuth'
+        'Remove-InfisicalIdentityAuth'
+        'New-InfisicalClientSecret'
+        'Get-InfisicalProjectMember'
+        'Add-InfisicalProjectMember'
+        'Remove-InfisicalProjectMember'
+        'Get-InfisicalProjectRole'
+        'New-InfisicalProjectRole'
+        'Remove-InfisicalProjectRole'
     )
 
     # Cmdlets to export from this module

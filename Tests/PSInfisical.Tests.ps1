@@ -57,6 +57,20 @@ Describe 'PSInfisical Module' {
                 'Remove-InfisicalSecretBulk'
                 'Get-InfisicalEnvironment'
                 'Get-InfisicalProject'
+                'Get-InfisicalIdentity'
+                'New-InfisicalIdentity'
+                'Set-InfisicalIdentity'
+                'Remove-InfisicalIdentity'
+                'Add-InfisicalIdentityAuth'
+                'Get-InfisicalIdentityAuth'
+                'Remove-InfisicalIdentityAuth'
+                'New-InfisicalClientSecret'
+                'Get-InfisicalProjectMember'
+                'Add-InfisicalProjectMember'
+                'Remove-InfisicalProjectMember'
+                'Get-InfisicalProjectRole'
+                'New-InfisicalProjectRole'
+                'Remove-InfisicalProjectRole'
             )
             $module = Get-Module -Name PSInfisical
         }
@@ -114,6 +128,20 @@ Describe 'PSInfisical Module' {
             'Remove-InfisicalSecretBulk'
             'Get-InfisicalEnvironment'
             'Get-InfisicalProject'
+            'Get-InfisicalIdentity'
+            'New-InfisicalIdentity'
+            'Set-InfisicalIdentity'
+            'Remove-InfisicalIdentity'
+            'Add-InfisicalIdentityAuth'
+            'Get-InfisicalIdentityAuth'
+            'Remove-InfisicalIdentityAuth'
+            'New-InfisicalClientSecret'
+            'Get-InfisicalProjectMember'
+            'Add-InfisicalProjectMember'
+            'Remove-InfisicalProjectMember'
+            'Get-InfisicalProjectRole'
+            'New-InfisicalProjectRole'
+            'Remove-InfisicalProjectRole'
         ) {
             $help = Get-Help $_
             $help.Synopsis | Should -Not -BeNullOrEmpty
@@ -145,6 +173,20 @@ Describe 'PSInfisical Module' {
             'Remove-InfisicalSecretBulk'
             'Get-InfisicalEnvironment'
             'Get-InfisicalProject'
+            'Get-InfisicalIdentity'
+            'New-InfisicalIdentity'
+            'Set-InfisicalIdentity'
+            'Remove-InfisicalIdentity'
+            'Add-InfisicalIdentityAuth'
+            'Get-InfisicalIdentityAuth'
+            'Remove-InfisicalIdentityAuth'
+            'New-InfisicalClientSecret'
+            'Get-InfisicalProjectMember'
+            'Add-InfisicalProjectMember'
+            'Remove-InfisicalProjectMember'
+            'Get-InfisicalProjectRole'
+            'New-InfisicalProjectRole'
+            'Remove-InfisicalProjectRole'
         ) {
             $help = Get-Help $_
             $help.examples.example.Count | Should -BeGreaterOrEqual 1
@@ -178,6 +220,20 @@ Describe 'PSInfisical Module' {
             'Remove-InfisicalSecretBulk'
             'Get-InfisicalEnvironment'
             'Get-InfisicalProject'
+            'Get-InfisicalIdentity'
+            'New-InfisicalIdentity'
+            'Set-InfisicalIdentity'
+            'Remove-InfisicalIdentity'
+            'Add-InfisicalIdentityAuth'
+            'Get-InfisicalIdentityAuth'
+            'Remove-InfisicalIdentityAuth'
+            'New-InfisicalClientSecret'
+            'Get-InfisicalProjectMember'
+            'Add-InfisicalProjectMember'
+            'Remove-InfisicalProjectMember'
+            'Get-InfisicalProjectRole'
+            'New-InfisicalProjectRole'
+            'Remove-InfisicalProjectRole'
         ) {
             $cmd = Get-Command $_
             $cmd.OutputType | Should -Not -BeNullOrEmpty

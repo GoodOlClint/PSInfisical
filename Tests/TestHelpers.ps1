@@ -331,6 +331,114 @@ function Get-SampleProjectsListResponse {
     }
 }
 
+# Sample API response for a single identity
+function Get-SampleIdentityResponse {
+    param(
+        [string] $Name = 'test-identity',
+        [string] $Id = 'identity-abc-123'
+    )
+    return @{
+        identity = @{
+            id                  = $Id
+            name                = $Name
+            orgId               = 'org-test-123'
+            role                = 'member'
+            authMethods         = @('universal-auth')
+            hasDeleteProtection = $false
+            metadata            = @()
+            createdAt           = '2024-05-01T10:00:00Z'
+            updatedAt           = '2024-05-01T10:00:00Z'
+        }
+    }
+}
+
+# Sample API response for listing identities
+function Get-SampleIdentitiesListResponse {
+    return @{
+        identities = @(
+            @{
+                id                  = 'identity-001'
+                name                = 'deploy-agent'
+                orgId               = 'org-test-123'
+                role                = 'member'
+                authMethods         = @('universal-auth')
+                hasDeleteProtection = $false
+                metadata            = @()
+                createdAt           = '2024-05-01T10:00:00Z'
+                updatedAt           = '2024-05-01T10:00:00Z'
+            },
+            @{
+                id                  = 'identity-002'
+                name                = 'ci-runner'
+                orgId               = 'org-test-123'
+                role                = 'no-access'
+                authMethods         = @()
+                hasDeleteProtection = $true
+                metadata            = @(@{ key = 'team'; value = 'platform' })
+                createdAt           = '2024-05-02T08:00:00Z'
+                updatedAt           = '2024-05-02T08:00:00Z'
+            }
+        )
+    }
+}
+
+# Sample API response for client secret creation
+function Get-SampleClientSecretResponse {
+    return @{
+        clientSecret   = 'cs-generated-secret-value'
+        clientSecretId = 'cs-id-001'
+    }
+}
+
+# Sample API response for listing project identity memberships
+function Get-SampleProjectMembersResponse {
+    return @{
+        identityMemberships = @(
+            @{
+                identityId = 'identity-001'
+                identity   = @{ id = 'identity-001'; name = 'deploy-agent' }
+                role       = 'member'
+                roleId     = 'role-member'
+                createdAt  = '2024-06-01T10:00:00Z'
+                updatedAt  = '2024-06-01T10:00:00Z'
+            },
+            @{
+                identityId = 'identity-002'
+                identity   = @{ id = 'identity-002'; name = 'ci-runner' }
+                role       = 'viewer'
+                roleId     = 'role-viewer'
+                createdAt  = '2024-06-02T08:00:00Z'
+                updatedAt  = '2024-06-02T08:00:00Z'
+            }
+        )
+    }
+}
+
+# Sample API response for listing project roles
+function Get-SampleProjectRolesResponse {
+    return @{
+        roles = @(
+            @{ id = 'role-001'; name = 'Admin'; slug = 'admin'; description = 'Full access' }
+            @{ id = 'role-002'; name = 'Member'; slug = 'member'; description = 'Read/write secrets' }
+            @{ id = 'role-003'; name = 'Viewer'; slug = 'viewer'; description = 'Read-only access' }
+        )
+    }
+}
+
+# Sample API response for creating a project role
+function Get-SampleProjectRoleResponse {
+    param([string] $Slug = 'custom-role')
+    return @{
+        role = @{
+            id          = 'role-custom-001'
+            name        = 'Custom Role'
+            slug        = $Slug
+            description = 'A custom role'
+            projectId   = 'test-project-id'
+        }
+    }
+}
+
 # Sample auth response (as returned by /v1/auth/universal-auth/login)
 function Get-SampleAuthResponse {
     return @{
