@@ -46,7 +46,19 @@ function Get-InfisicalProject {
     if ($PSCmdlet.ParameterSetName -eq 'ById') {
         $response = Invoke-InfisicalApi -Method GET -Endpoint "/api/v2/workspace/$Id" -Session $session
 
-        if ($null -eq $response -or $null -eq $response.workspace) {
+        $ws = if ($null -ne $response) {
+            if ($response -is [hashtable]) {
+                if ($response.ContainsKey('project')) { $response['project'] }
+                elseif ($response.ContainsKey('workspace')) { $response['workspace'] }
+                else { $null }
+            } else {
+                if ($null -ne $response.PSObject.Properties['project']) { $response.project }
+                elseif ($null -ne $response.PSObject.Properties['workspace']) { $response.workspace }
+                else { $null }
+            }
+        }
+
+        if ($null -eq $ws) {
             $errorRecord = [System.Management.Automation.ErrorRecord]::new(
                 [System.Management.Automation.ItemNotFoundException]::new("Project '$Id' not found."),
                 'InfisicalProjectNotFound',
@@ -57,17 +69,27 @@ function Get-InfisicalProject {
             return
         }
 
-        return ConvertTo-InfisicalProjectObject -Data $response.workspace
+        return ConvertTo-InfisicalProjectObject -Data $ws
     }
 
     # List all projects
     $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v2/workspace' -Session $session
 
-    if ($null -eq $response -or $null -eq $response.workspaces) {
-        return
+    if ($null -eq $response) { return }
+
+    $list = if ($response -is [hashtable]) {
+        if ($response.ContainsKey('projects')) { $response['projects'] }
+        elseif ($response.ContainsKey('workspaces')) { $response['workspaces'] }
+        else { $null }
+    } else {
+        if ($null -ne $response.PSObject.Properties['projects']) { $response.projects }
+        elseif ($null -ne $response.PSObject.Properties['workspaces']) { $response.workspaces }
+        else { $null }
     }
 
-    foreach ($ws in $response.workspaces) {
+    if ($null -eq $list) { return }
+
+    foreach ($ws in $list) {
         ConvertTo-InfisicalProjectObject -Data $ws
     }
 }

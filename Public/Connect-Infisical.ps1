@@ -32,7 +32,8 @@ function Connect-Infisical {
         Use this parameter for self-hosted Infisical instances.
 
     .PARAMETER ProjectId
-        The Infisical workspace/project ID. Required for all operations.
+        The Infisical workspace/project ID. Optional at connect time; required by
+        most secret and project-scoped operations. Can be set later or passed per-command.
 
     .PARAMETER Environment
         The default environment slug (e.g. "dev", "staging", "prod"). Defaults to "prod".
@@ -139,7 +140,11 @@ function Connect-Infisical {
         [ValidateNotNullOrEmpty()]
         [string] $ApiUrl = 'https://app.infisical.com',
 
-        [Parameter(Mandatory)]
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string] $OrganizationId,
+
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [string] $ProjectId,
 
@@ -171,6 +176,7 @@ function Connect-Infisical {
 
         $session = [InfisicalSession]::new()
         $session.ApiUrl = $ApiUrl
+        $session.OrganizationId = $OrganizationId
         $session.ProjectId = $ProjectId
         $session.DefaultEnvironment = $Environment
         $session.AuthMethod = $PSCmdlet.ParameterSetName
@@ -299,6 +305,37 @@ function Connect-Infisical {
 
         $session.UpdateConnectionStatus()
         $script:InfisicalSession = $session
+
+        # Auto-resolve OrganizationId from JWT if not explicitly provided
+        if ([string]::IsNullOrEmpty($session.OrganizationId) -and $null -ne $session.AccessToken) {
+            Write-Verbose 'Connect-Infisical: Auto-resolving OrganizationId from JWT claims...'
+            try {
+                $tokenPlain = $session.GetAccessTokenPlainText()
+                $jwtParts = $tokenPlain.Split('.')
+                if ($jwtParts.Count -ge 2) {
+                    $jwtPayload = $jwtParts[1].Replace('-', '+').Replace('_', '/')
+                    switch ($jwtPayload.Length % 4) {
+                        2 { $jwtPayload += '==' }
+                        3 { $jwtPayload += '=' }
+                    }
+                    $claims = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($jwtPayload)) | ConvertFrom-Json
+
+                    if ($claims.identityId) {
+                        $identityResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v1/identities/$($claims.identityId)" -Session $session
+                        if ($null -ne $identityResponse -and $null -ne $identityResponse.identity) {
+                            $orgId = if ($identityResponse.identity -is [hashtable]) { $identityResponse.identity['orgId'] } else { $identityResponse.identity.orgId }
+                            if (-not [string]::IsNullOrEmpty($orgId)) {
+                                $session.OrganizationId = $orgId
+                                Write-Verbose "Connect-Infisical: Auto-resolved OrganizationId to '$orgId'"
+                            }
+                        }
+                    }
+                }
+            }
+            catch {
+                Write-Verbose "Connect-Infisical: Unable to auto-resolve OrganizationId: $($_.Exception.Message)"
+            }
+        }
 
         # Probe server API capabilities for version gating
         Write-Verbose 'Connect-Infisical: Probing server API capabilities...'

@@ -40,7 +40,10 @@ function New-InfisicalProject {
         [ValidateNotNullOrEmpty()]
         [string] $Name,
 
-        [Parameter(Mandatory)]
+        [Parameter()]
+        [string] $Description,
+
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [string] $OrganizationId,
 
@@ -49,17 +52,41 @@ function New-InfisicalProject {
     )
 
     $session = Get-InfisicalSession
+    $resolvedOrgId = if ([string]::IsNullOrEmpty($OrganizationId)) { $session.OrganizationId } else { $OrganizationId }
+    if ([string]::IsNullOrEmpty($resolvedOrgId)) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('OrganizationId is required. Specify -OrganizationId or set it via Set-InfisicalSession.'),
+                'InfisicalOrganizationIdRequired',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $null
+            )
+        )
+    }
 
-    if ($PSCmdlet.ShouldProcess("Creating project '$Name' in organization '$OrganizationId'")) {
+    if ($PSCmdlet.ShouldProcess("Creating project '$Name' in organization '$resolvedOrgId'")) {
         $body = @{
             projectName    = $Name
-            organizationId = $OrganizationId
+            organizationId = $resolvedOrgId
+        }
+        if ($PSBoundParameters.ContainsKey('Description')) {
+            $body['projectDescription'] = $Description
         }
 
         $response = Invoke-InfisicalApi -Method POST -Endpoint '/api/v2/workspace' -Body $body -Session $session
 
-        if ($PassThru.IsPresent -and $null -ne $response -and $null -ne $response.workspace) {
-            $ws = $response.workspace
+        $ws = if ($null -ne $response) {
+            if ($response -is [hashtable]) {
+                if ($response.ContainsKey('project')) { $response['project'] }
+                elseif ($response.ContainsKey('workspace')) { $response['workspace'] }
+                else { $null }
+            } else {
+                if ($null -ne $response.PSObject.Properties['project']) { $response.project }
+                elseif ($null -ne $response.PSObject.Properties['workspace']) { $response.workspace }
+                else { $null }
+            }
+        }
+        if ($PassThru.IsPresent -and $null -ne $ws) {
             $createdAt = [datetime]::MinValue
             $updatedAt = [datetime]::MinValue
             if ($ws.createdAt) { [void][datetime]::TryParse($ws.createdAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$createdAt) }

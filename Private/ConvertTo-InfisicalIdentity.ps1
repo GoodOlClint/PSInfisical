@@ -19,7 +19,12 @@ function ConvertTo-InfisicalIdentity {
         if ($IdentityData.id) { $IdentityData.id } else { '' }
     }
 
-    $identity.Name = if ($IdentityData -is [hashtable]) { $IdentityData['name'] } else { $IdentityData.name }
+    $identity.Name = if ($IdentityData -is [hashtable]) {
+        if ($IdentityData.ContainsKey('name')) { $IdentityData['name'] } else { '' }
+    } else {
+        $prop = $IdentityData.PSObject.Properties['name']
+        if ($null -ne $prop) { $prop.Value } else { '' }
+    }
 
     # OrgId may come as 'orgId' or 'organizationId'
     $orgId = if ($IdentityData -is [hashtable]) {
@@ -27,15 +32,18 @@ function ConvertTo-InfisicalIdentity {
         elseif ($IdentityData.ContainsKey('organizationId')) { $IdentityData['organizationId'] }
         else { '' }
     } else {
-        if ($IdentityData.orgId) { $IdentityData.orgId }
-        elseif ($IdentityData.organizationId) { $IdentityData.organizationId }
+        if ($null -ne $IdentityData.PSObject.Properties['orgId']) { $IdentityData.orgId }
+        elseif ($null -ne $IdentityData.PSObject.Properties['organizationId']) { $IdentityData.organizationId }
         else { '' }
     }
     $identity.OrganizationId = $orgId
 
-    $identity.Role = if ($IdentityData -is [hashtable] -and $IdentityData.ContainsKey('role')) { $IdentityData['role'] }
-                     elseif ($IdentityData -isnot [hashtable] -and $IdentityData.role) { $IdentityData.role }
-                     else { '' }
+    $identity.Role = if ($IdentityData -is [hashtable]) {
+        if ($IdentityData.ContainsKey('role')) { $IdentityData['role'] } else { '' }
+    } else {
+        $prop = $IdentityData.PSObject.Properties['role']
+        if ($null -ne $prop) { $prop.Value } else { '' }
+    }
 
     # Auth methods array
     $hasAuthMethods = if ($IdentityData -is [hashtable]) { $IdentityData.ContainsKey('authMethods') } else { $null -ne $IdentityData.PSObject.Properties['authMethods'] }

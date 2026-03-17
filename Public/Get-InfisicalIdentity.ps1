@@ -44,7 +44,7 @@ function Get-InfisicalIdentity {
         [ValidateNotNullOrEmpty()]
         [string] $Id,
 
-        [Parameter(Mandatory, ParameterSetName = 'List')]
+        [Parameter(ParameterSetName = 'List')]
         [ValidateNotNullOrEmpty()]
         [string] $OrganizationId
     )
@@ -69,13 +69,43 @@ function Get-InfisicalIdentity {
     }
 
     # List all identities in org
-    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v1/identities' -QueryParameters @{ orgId = $OrganizationId } -Session $session
+    $resolvedOrgId = if ([string]::IsNullOrEmpty($OrganizationId)) { $session.OrganizationId } else { $OrganizationId }
+    if ([string]::IsNullOrEmpty($resolvedOrgId)) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('OrganizationId is required. Specify -OrganizationId or set it via Set-InfisicalSession.'),
+                'InfisicalOrganizationIdRequired',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $null
+            )
+        )
+    }
+    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v1/identities' -QueryParameters @{ orgId = $resolvedOrgId } -Session $session
 
     if ($null -eq $response -or $null -eq $response.identities) {
         return
     }
 
-    foreach ($identityData in $response.identities) {
-        ConvertTo-InfisicalIdentity -IdentityData $identityData
+    foreach ($membership in $response.identities) {
+        # The list endpoint returns org membership wrappers with a nested .identity object.
+        # Merge the nested identity data with membership-level fields (role, orgId, timestamps).
+        $innerIdentity = if ($membership -is [hashtable]) { $membership['identity'] } else { $membership.identity }
+        if ($null -ne $innerIdentity) {
+            $merged = @{
+                id                  = if ($innerIdentity -is [hashtable]) { $innerIdentity['id'] } else { $innerIdentity.id }
+                name                = if ($innerIdentity -is [hashtable]) { $innerIdentity['name'] } else { $innerIdentity.name }
+                orgId               = if ($membership -is [hashtable]) { $membership['orgId'] } else { $membership.orgId }
+                role                = if ($membership -is [hashtable]) { $membership['role'] } else { $membership.role }
+                authMethods         = if ($innerIdentity -is [hashtable]) { $innerIdentity['authMethods'] } else { $innerIdentity.authMethods }
+                hasDeleteProtection = if ($innerIdentity -is [hashtable]) { $innerIdentity['hasDeleteProtection'] } else { $innerIdentity.hasDeleteProtection }
+                createdAt           = if ($membership -is [hashtable]) { $membership['createdAt'] } else { $membership.createdAt }
+                updatedAt           = if ($membership -is [hashtable]) { $membership['updatedAt'] } else { $membership.updatedAt }
+            }
+            ConvertTo-InfisicalIdentity -IdentityData ([PSCustomObject]$merged)
+        }
+        else {
+            # Fallback: flat identity object (shouldn't happen for list, but be safe)
+            ConvertTo-InfisicalIdentity -IdentityData $membership
+        }
     }
 }

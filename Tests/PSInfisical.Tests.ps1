@@ -80,6 +80,9 @@ Describe 'PSInfisical Module' {
                 'New-InfisicalEnvironment'
                 'Set-InfisicalEnvironment'
                 'Remove-InfisicalEnvironment'
+                'Set-InfisicalSession'
+                'Set-InfisicalProject'
+                'Get-InfisicalOrganization'
             )
             $module = Get-Module -Name PSInfisical
         }
@@ -160,6 +163,9 @@ Describe 'PSInfisical Module' {
             'New-InfisicalEnvironment'
             'Set-InfisicalEnvironment'
             'Remove-InfisicalEnvironment'
+            'Set-InfisicalSession'
+            'Set-InfisicalProject'
+            'Get-InfisicalOrganization'
         ) {
             $help = Get-Help $_
             $help.Synopsis | Should -Not -BeNullOrEmpty
@@ -214,6 +220,9 @@ Describe 'PSInfisical Module' {
             'New-InfisicalEnvironment'
             'Set-InfisicalEnvironment'
             'Remove-InfisicalEnvironment'
+            'Set-InfisicalSession'
+            'Set-InfisicalProject'
+            'Get-InfisicalOrganization'
         ) {
             $help = Get-Help $_
             $help.examples.example.Count | Should -BeGreaterOrEqual 1
@@ -270,6 +279,9 @@ Describe 'PSInfisical Module' {
             'New-InfisicalEnvironment'
             'Set-InfisicalEnvironment'
             'Remove-InfisicalEnvironment'
+            'Set-InfisicalSession'
+            'Set-InfisicalProject'
+            'Get-InfisicalOrganization'
         ) {
             $cmd = Get-Command $_
             $cmd.OutputType | Should -Not -BeNullOrEmpty

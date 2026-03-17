@@ -77,6 +77,9 @@
         'New-InfisicalEnvironment'
         'Set-InfisicalEnvironment'
         'Remove-InfisicalEnvironment'
+        'Set-InfisicalSession'
+        'Set-InfisicalProject'
+        'Get-InfisicalOrganization'
     )
 
     # Cmdlets to export from this module

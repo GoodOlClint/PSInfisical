@@ -57,8 +57,14 @@ function Invoke-InfisicalApi {
         ErrorAction = 'Stop'
     }
 
-    if ($Body -and $Body.Count -gt 0 -and $Method -in @('POST', 'PATCH', 'DELETE')) {
-        $invokeParams['Body'] = ($Body | ConvertTo-Json -Depth 10 -Compress)
+    if ($Method -in @('POST', 'PATCH', 'DELETE')) {
+        if ($Body -and $Body.Count -gt 0) {
+            $invokeParams['Body'] = ($Body | ConvertTo-Json -Depth 10 -Compress)
+        }
+        else {
+            # Some endpoints require a JSON body even when empty
+            $invokeParams['Body'] = '{}'
+        }
         $invokeParams['ContentType'] = 'application/json'
     }
 

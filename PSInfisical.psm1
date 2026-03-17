@@ -29,6 +29,7 @@ $moduleRoot = $PSScriptRoot
 
 class InfisicalSession {
     [string] $ApiUrl
+    [string] $OrganizationId
     [string] $ProjectId
     [string] $DefaultEnvironment
     [System.Security.SecureString] $AccessToken
@@ -81,7 +82,7 @@ class InfisicalSession {
 
     [string] ToString() {
         $this.UpdateConnectionStatus()
-        return "InfisicalSession: ApiUrl=$($this.ApiUrl), ProjectId=$($this.ProjectId), AuthMethod=$($this.AuthMethod), Connected=$($this.Connected)"
+        return "InfisicalSession: ApiUrl=$($this.ApiUrl), OrgId=$($this.OrganizationId), ProjectId=$($this.ProjectId), AuthMethod=$($this.AuthMethod), Connected=$($this.Connected)"
     }
 }
 

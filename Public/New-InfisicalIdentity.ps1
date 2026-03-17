@@ -58,7 +58,7 @@ function New-InfisicalIdentity {
         [ValidateNotNullOrEmpty()]
         [string] $Name,
 
-        [Parameter(Mandatory)]
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [string] $OrganizationId,
 
@@ -77,11 +77,22 @@ function New-InfisicalIdentity {
     )
 
     $session = Get-InfisicalSession
+    $resolvedOrgId = if ([string]::IsNullOrEmpty($OrganizationId)) { $session.OrganizationId } else { $OrganizationId }
+    if ([string]::IsNullOrEmpty($resolvedOrgId)) {
+        $PSCmdlet.ThrowTerminatingError(
+            [System.Management.Automation.ErrorRecord]::new(
+                [System.ArgumentException]::new('OrganizationId is required. Specify -OrganizationId or set it via Set-InfisicalSession.'),
+                'InfisicalOrganizationIdRequired',
+                [System.Management.Automation.ErrorCategory]::InvalidArgument,
+                $null
+            )
+        )
+    }
 
-    if ($PSCmdlet.ShouldProcess("Creating identity '$Name' in organization '$OrganizationId'")) {
+    if ($PSCmdlet.ShouldProcess("Creating identity '$Name' in organization '$resolvedOrgId'")) {
         $body = @{
             name           = $Name
-            organizationId = $OrganizationId
+            organizationId = $resolvedOrgId
             role           = $Role
         }
 
