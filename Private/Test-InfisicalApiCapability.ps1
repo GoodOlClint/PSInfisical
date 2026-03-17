@@ -23,16 +23,24 @@ function Test-InfisicalApiCapability {
     }
     $baseUri = $Session.ApiUrl.TrimEnd('/')
 
-    # Probe v4 secrets endpoint with a lightweight GET (will 400 or 200 if route exists, 404 if not)
-    foreach ($version in @('v4', 'v3')) {
-        $probeUri = "$baseUri/api/$version/secrets"
-        $key = if ($version -eq 'v4') { 'SecretsV4' } else { 'SecretsV3' }
+    # Probe each version with its correct endpoint path and parameter name.
+    # v4 uses /api/v4/secrets with projectId; v3 uses /api/v3/secrets/raw with workspaceId.
+    $probes = @(
+        @{ Version = 'v4'; Path = '/api/v4/secrets'; ParamName = 'projectId'; Key = 'SecretsV4' }
+        @{ Version = 'v3'; Path = '/api/v3/secrets/raw'; ParamName = 'workspaceId'; Key = 'SecretsV3' }
+    )
+
+    foreach ($probe in $probes) {
+        # Skip probe if no ProjectId is set (can't probe without it)
+        if ([string]::IsNullOrEmpty($Session.ProjectId)) { continue }
+
+        $probeUri = "$baseUri$($probe.Path)"
         try {
             # Use the list endpoint with required params -- even if the query fails with a
             # permission/validation error, a non-404 response means the route exists.
-            $null = Invoke-RestMethod -Uri "$probeUri`?projectId=$($Session.ProjectId)&environment=$($Session.DefaultEnvironment)&secretPath=/" `
+            $null = Invoke-RestMethod -Uri "$probeUri`?$($probe.ParamName)=$($Session.ProjectId)&environment=$($Session.DefaultEnvironment)&secretPath=/" `
                 -Method GET -Headers $headers -TimeoutSec 10 -ErrorAction Stop
-            $capabilities[$key] = $true
+            $capabilities[$probe.Key] = $true
         }
         catch {
             $statusCode = $null
@@ -48,7 +56,7 @@ function Test-InfisicalApiCapability {
 
             # Any response other than 404 means the route exists (could be 400, 401, 403, etc.)
             if ($null -ne $statusCode -and $statusCode -ne 404) {
-                $capabilities[$key] = $true
+                $capabilities[$probe.Key] = $true
             }
         }
     }

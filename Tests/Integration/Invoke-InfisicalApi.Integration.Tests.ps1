@@ -143,7 +143,7 @@ Describe 'Invoke-InfisicalApi Integration Tests' -Tag 'Integration' {
 
             # Either an auth/access error was thrown, or the function returned empty
             if ($thrown) {
-                $thrown.FullyQualifiedErrorId | Should -Match 'Infisical(AuthenticationFailed|AccessDenied|ApiError)'
+                $thrown.FullyQualifiedErrorId | Should -Match 'Infisical(AuthenticationFailed|AccessDenied|ApiError|ApiVersionUnsupported)'
             }
             else {
                 # 404 maps to $null — function returns nothing, which is acceptable

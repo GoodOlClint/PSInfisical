@@ -40,7 +40,7 @@ services:
       - infisical-test
 
   infisical:
-    image: infisical/infisical:latest-postgres
+    image: infisical/infisical:latest
     restart: unless-stopped
     depends_on:
       db:

@@ -68,8 +68,61 @@ function Invoke-InfisicalApi {
         $invokeParams['ContentType'] = 'application/json'
     }
 
-    # Check API version compatibility before making the call
-    Assert-InfisicalApiVersion -Endpoint $Endpoint -Session $Session
+    # API version fallback: all public functions use v4 conventions.
+    # If the server only supports v3, transparently rewrite endpoints and params.
+    $needsV3Fallback = $false
+    if ($Endpoint -match '^/api/v4/secrets' -and
+        $null -ne $Session.ApiCapabilities -and
+        $Session.ApiCapabilities.Count -gt 0 -and
+        -not $Session.ApiCapabilities['SecretsV4'] -and
+        $Session.ApiCapabilities['SecretsV3']) {
+
+        $needsV3Fallback = $true
+
+        # Rewrite endpoint: /api/v4/secrets → /api/v3/secrets/raw, /api/v4/secrets/bulk → /api/v3/secrets/bulk
+        if ($Endpoint -match '^/api/v4/secrets/bulk') {
+            $Endpoint = $Endpoint -replace '^/api/v4/', '/api/v3/'
+        }
+        else {
+            $Endpoint = $Endpoint -replace '^/api/v4/secrets', '/api/v3/secrets/raw'
+        }
+
+        # Swap projectId → workspaceId in query parameters
+        if ($QueryParameters -and $QueryParameters.ContainsKey('projectId')) {
+            $QueryParameters['workspaceId'] = $QueryParameters['projectId']
+            $QueryParameters.Remove('projectId')
+        }
+
+        # Swap projectId → workspaceId in body
+        if ($Body -and $Body.ContainsKey('projectId')) {
+            $Body['workspaceId'] = $Body['projectId']
+            $Body.Remove('projectId')
+        }
+
+        # Rebuild URI and body with rewritten values
+        $uri = "$baseUri$Endpoint"
+        if ($QueryParameters -and $QueryParameters.Count -gt 0) {
+            $queryParts = [System.Collections.Generic.List[string]]::new()
+            foreach ($key in $QueryParameters.Keys) {
+                $encodedKey = [System.Uri]::EscapeDataString($key)
+                $encodedValue = [System.Uri]::EscapeDataString([string]$QueryParameters[$key])
+                $queryParts.Add("$encodedKey=$encodedValue")
+            }
+            $uri = "$uri`?$($queryParts -join '&')"
+        }
+        $invokeParams['Uri'] = $uri
+
+        if ($Method -in @('POST', 'PATCH', 'DELETE') -and $Body -and $Body.Count -gt 0) {
+            $invokeParams['Body'] = ($Body | ConvertTo-Json -Depth 10 -Compress)
+        }
+
+        Write-Verbose "Invoke-InfisicalApi: v3 fallback — rewritten endpoint to $Endpoint"
+    }
+
+    # Check API version compatibility — throws if neither v4 nor v3 is available
+    if (-not $needsV3Fallback) {
+        Assert-InfisicalApiVersion -Endpoint $Endpoint -Session $Session
+    }
 
     # Verbose logging — endpoint and method only, never secrets or tokens
     Write-Verbose "Invoke-InfisicalApi: $Method $Endpoint"
