@@ -352,6 +352,49 @@ Describe 'Connect-Infisical' {
             $session.DefaultEnvironment | Should -Be 'staging'
         }
     }
+
+    Context 'EmailAuth' {
+        AfterEach {
+            Disconnect-Infisical -Confirm:$false -ErrorAction SilentlyContinue
+        }
+
+        It 'Connects with email and password' {
+            Mock Invoke-RestMethod {
+                return @{ accessToken = 'mock-email-token'; expiresIn = 7200 }
+            } -ModuleName PSInfisical
+
+            $password = New-TestSecureString -PlainText 'test-password'
+            $session = Connect-Infisical -Email 'user@example.com' -Password $password -ProjectId 'proj-123' -PassThru
+
+            $session | Should -Not -BeNullOrEmpty
+            $session.Connected | Should -BeTrue
+            $session.AuthMethod | Should -Be 'EmailAuth'
+        }
+
+        It 'Calls the correct login endpoint' {
+            Mock Invoke-RestMethod {
+                return @{ accessToken = 'mock-email-token'; expiresIn = 7200 }
+            } -ModuleName PSInfisical
+
+            $password = New-TestSecureString -PlainText 'test-password'
+            Connect-Infisical -Email 'user@example.com' -Password $password -ProjectId 'proj-123'
+
+            Should -Invoke Invoke-RestMethod -ModuleName PSInfisical -ParameterFilter {
+                $Uri -like '*/api/v3/auth/login' -and $Method -eq 'POST'
+            }
+        }
+
+        It 'Throws on invalid credentials' {
+            Mock Invoke-RestMethod {
+                throw [System.Net.WebException]::new('401 Unauthorized')
+            } -ModuleName PSInfisical
+
+            $password = New-TestSecureString -PlainText 'wrong-password'
+
+            { Connect-Infisical -Email 'user@example.com' -Password $password -ProjectId 'proj-123' } |
+                Should -Throw '*Email/password login failed*'
+        }
+    }
 }
 
 AfterAll {

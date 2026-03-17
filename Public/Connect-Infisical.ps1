@@ -136,6 +136,15 @@ function Connect-Infisical {
         [ValidateNotNull()]
         [System.Security.SecureString] $LDAPPassword,
 
+        # Email/Password Auth
+        [Parameter(Mandatory, ParameterSetName = 'EmailAuth')]
+        [ValidateNotNullOrEmpty()]
+        [string] $Email,
+
+        [Parameter(Mandatory, ParameterSetName = 'EmailAuth')]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $Password,
+
         [Parameter()]
         [ValidateNotNullOrEmpty()]
         [string] $ApiUrl = 'https://app.infisical.com',
@@ -298,6 +307,47 @@ function Connect-Infisical {
                 $ldapPass = [System.Net.NetworkCredential]::new('', $LDAPPassword).Password
                 $authBody = @{ username = $LDAPUsername; password = $ldapPass }
                 $authResponse = Invoke-InfisicalAuthEndpoint -ApiUrl $ApiUrl -AuthPath 'ldap-auth' -Body $authBody -CallerCmdlet $PSCmdlet
+                Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+                $authResponse = $null
+            }
+            'EmailAuth' {
+                $passwordPlainText = [System.Net.NetworkCredential]::new('', $Password).Password
+                $authBody = @{
+                    email    = $Email
+                    password = $passwordPlainText
+                }
+                $bodyJson = $authBody | ConvertTo-Json -Compress
+                $authUri = "$ApiUrl/api/v3/auth/login"
+
+                Write-Verbose "Connect-Infisical: Authenticating via POST $authUri"
+
+                try {
+                    $authResponse = Invoke-RestMethod -Uri $authUri -Method POST -Body $bodyJson -ContentType 'application/json' -TimeoutSec 30 -ErrorAction Stop
+                }
+                catch {
+                    $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                        [System.Security.Authentication.AuthenticationException]::new(
+                            "Email/password login failed: $($_.Exception.Message)"
+                        ),
+                        'InfisicalEmailAuthFailed',
+                        [System.Management.Automation.ErrorCategory]::AuthenticationError,
+                        $authUri
+                    )
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
+                }
+
+                if (-not $authResponse -or [string]::IsNullOrEmpty($authResponse.accessToken)) {
+                    $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                        [System.Security.Authentication.AuthenticationException]::new(
+                            'Email/password login succeeded but the response did not contain an access token.'
+                        ),
+                        'InfisicalEmailAuthNoToken',
+                        [System.Management.Automation.ErrorCategory]::AuthenticationError,
+                        $authUri
+                    )
+                    $PSCmdlet.ThrowTerminatingError($errorRecord)
+                }
+
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
                 $authResponse = $null
             }
