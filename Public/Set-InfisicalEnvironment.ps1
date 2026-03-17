@@ -34,6 +34,11 @@ function Set-InfisicalEnvironment {
 
         Renames an environment.
 
+    .EXAMPLE
+        Set-InfisicalEnvironment -Id 'env-123' -Position 2 -PassThru
+
+        Moves an environment to position 2 and returns the updated object.
+
     .OUTPUTS
         PSCustomObject when -PassThru is specified; otherwise, no output.
 

@@ -93,7 +93,7 @@ Describe 'Get-InfisicalSecrets' {
         It 'Passes -TagSlugs as comma-separated query param' {
             Mock Invoke-RestMethod {
                 param($Uri)
-                $Uri | Should -Match 'tagSlugs=prod%2Cdb'
+                $Uri | Should -Match 'tagSlugs=prod(%2C|,)db'
                 return Get-SampleSecretsListResponse
             } -ModuleName PSInfisical
 

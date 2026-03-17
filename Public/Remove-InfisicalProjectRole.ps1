@@ -23,6 +23,11 @@ function Remove-InfisicalProjectRole {
 
         Deletes a custom role without confirmation.
 
+    .EXAMPLE
+        Get-InfisicalProjectRole | Where-Object Name -eq 'temp-role' | ForEach-Object { Remove-InfisicalProjectRole -RoleId $_.Id }
+
+        Finds a role by name and removes it.
+
     .OUTPUTS
         None
 

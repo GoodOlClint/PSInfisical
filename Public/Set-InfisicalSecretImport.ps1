@@ -43,6 +43,11 @@ function Set-InfisicalSecretImport {
 
         Moves an import to the highest priority position.
 
+    .EXAMPLE
+        Set-InfisicalSecretImport -Id 'import-001' -SourceEnvironment 'staging' -SourcePath '/shared' -PassThru
+
+        Updates the source environment and path for an import and returns the updated object.
+
     .OUTPUTS
         [InfisicalSecretImport] when -PassThru is specified; otherwise, no output.
 

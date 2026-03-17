@@ -22,6 +22,11 @@ function Remove-InfisicalEnvironment {
 
         Deletes an environment without confirmation.
 
+    .EXAMPLE
+        Remove-InfisicalEnvironment -Id 'env-abc-123' -WhatIf
+
+        Previews the deletion without actually removing the environment.
+
     .OUTPUTS
         None
 

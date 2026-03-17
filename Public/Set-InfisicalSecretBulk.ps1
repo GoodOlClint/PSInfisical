@@ -37,6 +37,11 @@ function Set-InfisicalSecretBulk {
 
         Updates two secrets in a single API call.
 
+    .EXAMPLE
+        Set-InfisicalSecretBulk -Secrets @(@{ Name = 'API_KEY'; Value = 'new-key'; NewName = 'SERVICE_KEY' }) -PassThru
+
+        Renames a secret while updating its value and returns the result.
+
     .OUTPUTS
         [InfisicalSecret[]] when -PassThru is specified; otherwise, no output.
 

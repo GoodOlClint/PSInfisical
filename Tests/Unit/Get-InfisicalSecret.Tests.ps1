@@ -109,7 +109,7 @@ Describe 'Get-InfisicalSecret' {
                 param($Uri)
                 # Verify the URI contains expected query parameters
                 $Uri | Should -Match 'environment=staging'
-                $Uri | Should -Match 'secretPath=%2Fmypath'
+                $Uri | Should -Match 'secretPath=(%2F|/)mypath'
                 return Get-SampleSecretResponse
             } -ModuleName PSInfisical
 

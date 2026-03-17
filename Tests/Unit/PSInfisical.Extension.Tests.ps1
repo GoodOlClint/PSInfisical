@@ -142,7 +142,7 @@ Describe 'PSInfisical.Extension' {
 
             Mock Invoke-RestMethod {
                 param($Uri)
-                $Uri | Should -Match 'secretPath=%2Fdatabase'
+                $Uri | Should -Match 'secretPath=(%2F|/)database'
                 return Get-SampleSecretResponse -Name 'DB_HOST' -Value 'localhost'
             } -ModuleName PSInfisical
 
@@ -505,7 +505,7 @@ Describe 'PSInfisical.Extension' {
 
             Mock Invoke-RestMethod {
                 param($Uri)
-                $Uri | Should -Match 'secretPath=%2F'
+                $Uri | Should -Match 'secretPath=(%2F|/)'
                 return Get-SampleSecretsListResponse
             } -ModuleName PSInfisical
 

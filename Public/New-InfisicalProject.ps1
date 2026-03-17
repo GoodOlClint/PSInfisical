@@ -25,6 +25,11 @@ function New-InfisicalProject {
 
         Creates a project and returns it.
 
+    .EXAMPLE
+        New-InfisicalProject -Name 'backend-api' -Description 'Backend service secrets'
+
+        Creates a project with a description using the session's default organization.
+
     .OUTPUTS
         PSCustomObject when -PassThru is specified; otherwise, no output.
 

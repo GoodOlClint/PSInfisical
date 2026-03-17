@@ -28,6 +28,11 @@ function Set-InfisicalProject {
 
         Renames a project and returns the updated object.
 
+    .EXAMPLE
+        Set-InfisicalProject -Id 'proj-abc-123' -AutoCapitalization $true
+
+        Enables automatic secret name capitalization for the project.
+
     .OUTPUTS
         PSCustomObject when -PassThru is specified; otherwise, no output.
 

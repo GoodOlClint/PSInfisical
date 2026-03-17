@@ -20,6 +20,11 @@ function Remove-InfisicalProject {
 
         Deletes a project without confirmation.
 
+    .EXAMPLE
+        Remove-InfisicalProject -Id 'proj-abc-123' -WhatIf
+
+        Previews the deletion without actually removing the project.
+
     .OUTPUTS
         None
 

@@ -20,6 +20,11 @@ function Get-InfisicalIdentityMembership {
 
         Returns all project memberships for the identity.
 
+    .EXAMPLE
+        Get-InfisicalIdentityMembership -IdentityId 'identity-123' | Where-Object Role -eq 'admin'
+
+        Returns only projects where the identity has the admin role.
+
     .OUTPUTS
         PSCustomObject[] with ProjectId, ProjectName, Role, and CreatedAt properties.
 

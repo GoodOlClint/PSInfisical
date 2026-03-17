@@ -21,6 +21,11 @@ function Get-InfisicalClientSecret {
 
         Lists all client secrets for the identity.
 
+    .EXAMPLE
+        Get-InfisicalClientSecret -IdentityId 'identity-123' | Where-Object IsActive -eq $true
+
+        Lists only active (non-revoked) client secrets.
+
     .OUTPUTS
         PSCustomObject[] with client secret metadata.
 
