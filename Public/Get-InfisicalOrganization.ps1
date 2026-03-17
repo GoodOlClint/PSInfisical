@@ -1,4 +1,4 @@
-# Get-InfisicalOrganization.ps1
+﻿# Get-InfisicalOrganization.ps1
 # Retrieves organizations accessible to the current identity/user.
 # Called by: User directly.
 # Dependencies: InfisicalSession class, Invoke-InfisicalApi, Get-InfisicalSession

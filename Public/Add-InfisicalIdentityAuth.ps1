@@ -1,4 +1,4 @@
-# Add-InfisicalIdentityAuth.ps1
+﻿# Add-InfisicalIdentityAuth.ps1
 # Attaches an authentication method to a machine identity.
 # Called by: User directly.
 # Dependencies: InfisicalSession class, Invoke-InfisicalApi, Get-InfisicalSession

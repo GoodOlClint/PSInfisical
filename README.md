@@ -7,16 +7,19 @@ A PowerShell module providing a clean, idiomatic interface to the [Infisical](ht
 
 ## Overview
 
-PSInfisical enables you to manage secrets stored in Infisical directly from PowerShell. It covers the full Infisical Secrets Vault API with SecureString support, 10 authentication methods, pipeline-friendly output, and integration with the standard SecretManagement framework.
+PSInfisical enables you to manage secrets stored in Infisical directly from PowerShell. It covers the full Infisical Secrets Vault API with SecureString support, 11 authentication methods, pipeline-friendly output, and integration with the standard SecretManagement framework.
 
 **What PSInfisical covers:**
-- Authentication (Universal Auth, AWS, Azure, GCP, Kubernetes, OIDC, JWT, LDAP, static tokens, pre-obtained JWTs)
+- Authentication (Email/Password, Universal Auth, AWS, Azure, GCP, Kubernetes, OIDC, JWT, LDAP, static tokens, pre-obtained JWTs)
+- Identity management: create, update, delete machine identities; attach/detach auth methods; manage client secrets
+- Project management: create, rename, delete projects; manage project members and custom roles
+- Environment management: create, update, delete environments
+- Organization discovery
 - Secrets: create, read, update, delete, version history, bulk operations
 - Folders: create, list, rename, delete
 - Tags: create, list, update, delete, attach to secrets
 - Secret imports: create, list, update, delete (cross-environment secret sharing)
-- Project and environment discovery
-- Server API version detection for self-hosted compatibility
+- Server API version detection with transparent v3 fallback for self-hosted compatibility
 - SecureString-first design for secret values
 - Microsoft.PowerShell.SecretManagement vault extension
 
@@ -82,6 +85,7 @@ You now have the three values needed to connect:
 
 | Method | Use Case | Auto-Refresh |
 |--------|----------|:------------:|
+| **Email/Password** (`-Email` + `-Password`) | Interactive bootstrap, admin scripts | Yes |
 | **Universal Auth** (`-ClientId` + `-ClientSecret`) | Production, CI/CD, automation | Yes |
 | **AWS Auth** (`-AWSIdentityDocument`) | EC2 instances, Lambda | No |
 | **Azure Auth** (`-AzureJwt`) | Azure managed identities | No |
@@ -95,7 +99,16 @@ You now have the three values needed to connect:
 
 ## Authentication
 
-### Universal Auth (Machine Identity) — Recommended
+### Email/Password — Simplest Bootstrap
+
+```powershell
+$password = Read-Host -AsSecureString -Prompt 'Password'
+Connect-Infisical -Email 'admin@example.com' -Password $password
+```
+
+Email/password login is the simplest way to get started. No machine identity setup required — just your Infisical account credentials. ProjectId is optional; you can discover organizations and projects after connecting.
+
+### Universal Auth (Machine Identity) — Recommended for Automation
 
 ```powershell
 $secret = Read-Host -AsSecureString -Prompt 'Client Secret'
@@ -129,8 +142,10 @@ Use the `-ApiUrl` parameter to point to your self-hosted instance:
 ```powershell
 Connect-Infisical -ClientId 'id' -ClientSecret $secret `
     -ProjectId 'proj-123' `
-    -ApiUrl 'https://infisical.mycompany.com/api'
+    -ApiUrl 'https://infisical.mycompany.com'
 ```
+
+PSInfisical automatically detects the server's API version during connect and falls back to v3 endpoints when v4 is not available. This means it works against both `infisical:latest` (v4) and `infisical:latest-postgres` (v3) without any configuration changes.
 
 ## Command Reference
 
@@ -140,6 +155,54 @@ Connect-Infisical -ClientId 'id' -ClientSecret $secret `
 |---------|-------------|
 | `Connect-Infisical` | Authenticate and establish a session |
 | `Disconnect-Infisical` | Clear the current session |
+| `Set-InfisicalSession` | Update OrganizationId, ProjectId, or Environment on the active session |
+
+### Organization
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalOrganization` | List organizations accessible to the current user/identity |
+
+### Identity Management
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalIdentity` | List or get machine identities in the organization |
+| `New-InfisicalIdentity` | Create a machine identity |
+| `Set-InfisicalIdentity` | Update identity properties |
+| `Remove-InfisicalIdentity` | Delete a machine identity |
+| `Add-InfisicalIdentityAuth` | Attach an auth method (universal-auth, aws-auth, etc.) |
+| `Get-InfisicalIdentityAuth` | Retrieve auth configuration for an identity |
+| `Remove-InfisicalIdentityAuth` | Detach an auth method |
+| `New-InfisicalClientSecret` | Generate a client secret (returns typed `InfisicalClientSecret`) |
+| `Get-InfisicalClientSecret` | List client secrets for an identity |
+| `Remove-InfisicalClientSecret` | Revoke a client secret |
+| `Get-InfisicalIdentityMembership` | List an identity's project memberships |
+
+### Project Management
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalProject` | List projects or get by ID |
+| `New-InfisicalProject` | Create a project (with `-Description`) |
+| `Set-InfisicalProject` | Rename a project or toggle settings |
+| `Remove-InfisicalProject` | Delete a project (ConfirmImpact=High) |
+| `Get-InfisicalProjectMember` | List project members |
+| `Add-InfisicalProjectMember` | Add an identity to a project with a role (`-PassThru` for typed result) |
+| `Remove-InfisicalProjectMember` | Remove an identity from a project |
+| `Set-InfisicalProjectMember` | Change a member's role |
+| `Get-InfisicalProjectRole` | List project roles (built-in and custom) |
+| `New-InfisicalProjectRole` | Create a custom project role |
+| `Remove-InfisicalProjectRole` | Delete a custom project role |
+
+### Environment Management
+
+| Command | Description |
+|---------|-------------|
+| `Get-InfisicalEnvironment` | List environments in a project |
+| `New-InfisicalEnvironment` | Create an environment |
+| `Set-InfisicalEnvironment` | Update environment name or slug |
+| `Remove-InfisicalEnvironment` | Delete an environment |
 
 ### Secret Operations
 
@@ -187,13 +250,6 @@ Connect-Infisical -ClientId 'id' -ClientSecret $secret `
 | `Set-InfisicalSecretImport` | Update import source or position |
 | `Remove-InfisicalSecretImport` | Delete a secret import |
 
-### Discovery
-
-| Command | Description |
-|---------|-------------|
-| `Get-InfisicalEnvironment` | List environments in a project |
-| `Get-InfisicalProject` | List projects or get by ID |
-
 ### Common Parameters
 
 Most commands accept these optional parameters:
@@ -205,6 +261,38 @@ Most commands accept these optional parameters:
 | `-ProjectId` | Override the session's project ID | Session default |
 
 ## Common Patterns
+
+### Bootstrap workflow: email login to full automation setup
+
+```powershell
+# 1. Log in with email/password (no machine identity needed yet)
+$pw = Read-Host -AsSecureString -Prompt 'Password'
+Connect-Infisical -Email 'admin@example.com' -Password $pw -ApiUrl 'https://infisical.mycompany.com'
+
+# 2. Discover your organization
+$org = Get-InfisicalOrganization | Select-Object -First 1
+
+# 3. Create a project
+$project = New-InfisicalProject -Name 'my-app' -OrganizationId $org.Id
+
+# 4. Set the session to the new project
+Set-InfisicalSession -ProjectId $project.Id
+
+# 5. Create a machine identity for CI/CD
+$identity = New-InfisicalIdentity -Name 'ci-deploy' -OrganizationId $org.Id -Role 'member'
+
+# 6. Attach Universal Auth and get a client secret
+Add-InfisicalIdentityAuth -IdentityId $identity.Id -AuthMethod 'universal-auth'
+$clientSecret = New-InfisicalClientSecret -IdentityId $identity.Id
+
+# 7. Add the identity to the project
+Add-InfisicalProjectMember -IdentityId $identity.Id -RoleSlug 'admin'
+
+# 8. Store the credentials for CI/CD
+Write-Host "Client ID:     $($identity.Id)"
+Write-Host "Client Secret: $($clientSecret.ClientSecretValue)"
+Write-Host "Project ID:    $($project.Id)"
+```
 
 ### Inject secrets as environment variables
 
@@ -299,6 +387,7 @@ All authentication methods are supported via `VaultParameters`:
 
 | VaultParameters Keys | Auth Method |
 |----------------------|-------------|
+| `Email` + `Password` | Email/Password |
 | `ClientId` + `ClientSecret` | Universal Auth (recommended) |
 | `AWSIdentityDocument` | AWS Auth |
 | `AzureJwt` | Azure Auth |

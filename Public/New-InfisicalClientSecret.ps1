@@ -1,4 +1,4 @@
-# New-InfisicalClientSecret.ps1
+﻿# New-InfisicalClientSecret.ps1
 # Generates a client secret for a machine identity's Universal Auth.
 # Called by: User directly.
 # Dependencies: InfisicalSession class, Invoke-InfisicalApi, Get-InfisicalSession
