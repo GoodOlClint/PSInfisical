@@ -81,6 +81,7 @@ task Test Build, {
         (Join-Path -Path $testsPath -ChildPath 'Unit')
     )
     $pesterConfig.Run.Exit = $false
+    $pesterConfig.Run.PassThru = $true
     $pesterConfig.Output.Verbosity = 'Detailed'
     $pesterConfig.TestResult.Enabled = $true
     $pesterConfig.TestResult.OutputPath = $testResultsPath
@@ -172,6 +173,7 @@ task Test-Integration Build, {
         $pesterConfig = New-PesterConfiguration
         $pesterConfig.Run.Path = $integrationDir
         $pesterConfig.Run.Exit = $false
+        $pesterConfig.Run.PassThru = $true
         $pesterConfig.Filter.Tag = 'Integration'
         $pesterConfig.Output.Verbosity = 'Detailed'
         $pesterConfig.TestResult.Enabled = $true
