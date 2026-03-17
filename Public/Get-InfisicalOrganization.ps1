@@ -1,5 +1,5 @@
 # Get-InfisicalOrganization.ps1
-# Retrieves organizations accessible to the current identity.
+# Retrieves organizations accessible to the current identity/user.
 # Called by: User directly.
 # Dependencies: InfisicalSession class, Invoke-InfisicalApi, Get-InfisicalSession
 
@@ -9,21 +9,21 @@ function Get-InfisicalOrganization {
         Retrieves organizations from Infisical.
 
     .DESCRIPTION
-        Retrieves the current identity's organization. When called without parameters,
-        returns the organization associated with the current session (auto-resolved
-        from the JWT during Connect-Infisical). When called with -Id, retrieves a
-        specific organization by ID.
+        Returns organizations accessible to the current session. Without parameters,
+        lists all organizations the current user/identity has access to. With -Id,
+        filters to a specific organization.
 
-        Note: Machine identities belong to a single organization. The list behavior
-        returns that organization.
+        User tokens (email/password login) can list all their organizations.
+        Machine identity tokens may get a 403 on the list endpoint — use
+        Set-InfisicalSession -OrganizationId instead.
 
     .PARAMETER Id
-        The organization ID to retrieve. When specified, returns a single organization.
+        The organization ID to retrieve. Filters the list to this specific org.
 
     .EXAMPLE
         Get-InfisicalOrganization
 
-        Returns the organization for the current session.
+        Returns all organizations for the current session.
 
     .EXAMPLE
         Get-InfisicalOrganization -Id 'org-abc-123'
@@ -41,45 +41,44 @@ function Get-InfisicalOrganization {
     [CmdletBinding(DefaultParameterSetName = 'Default')]
     [OutputType([PSObject])]
     param(
-        [Parameter(Mandatory, ParameterSetName = 'ById', Position = 0)]
+        [Parameter(ParameterSetName = 'ById', Position = 0)]
         [ValidateNotNullOrEmpty()]
         [string] $Id
     )
 
     $session = Get-InfisicalSession
 
-    $resolvedId = if ($PSCmdlet.ParameterSetName -eq 'ById') {
-        $Id
-    }
-    else {
-        $session.OrganizationId
-    }
+    # Use /api/v1/organization (singular) to list orgs — works for both user and
+    # machine identity tokens (machine identities may get 403 depending on permissions).
+    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v1/organization' -Session $session
 
-    if ([string]::IsNullOrEmpty($resolvedId)) {
-        $PSCmdlet.ThrowTerminatingError(
-            [System.Management.Automation.ErrorRecord]::new(
-                [System.ArgumentException]::new('OrganizationId is not available. Specify -Id or set it via Set-InfisicalSession -OrganizationId.'),
-                'InfisicalOrganizationIdRequired',
-                [System.Management.Automation.ErrorCategory]::InvalidArgument,
-                $null
-            )
-        )
-    }
-
-    $response = Invoke-InfisicalApi -Method GET -Endpoint "/api/v1/organization/$resolvedId" -Session $session
-
-    if ($null -eq $response -or $null -eq $response.organization) {
-        $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-            [System.Management.Automation.ItemNotFoundException]::new("Organization '$resolvedId' not found or access denied."),
-            'InfisicalOrganizationNotFound',
-            [System.Management.Automation.ErrorCategory]::ObjectNotFound,
-            $resolvedId
-        )
-        $PSCmdlet.WriteError($errorRecord)
+    if ($null -eq $response -or $null -eq $response.organizations) {
         return
     }
 
-    ConvertTo-InfisicalOrganizationObject -Data $response.organization
+    $orgs = @($response.organizations)
+
+    # Filter to specific ID if requested
+    if (-not [string]::IsNullOrEmpty($Id)) {
+        $orgs = @($orgs | Where-Object {
+            $orgId = if ($_ -is [hashtable]) { $_['id'] } else { $_.id }
+            $orgId -eq $Id
+        })
+        if ($orgs.Count -eq 0) {
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                [System.Management.Automation.ItemNotFoundException]::new("Organization '$Id' not found."),
+                'InfisicalOrganizationNotFound',
+                [System.Management.Automation.ErrorCategory]::ObjectNotFound,
+                $Id
+            )
+            $PSCmdlet.WriteError($errorRecord)
+            return
+        }
+    }
+
+    foreach ($org in $orgs) {
+        ConvertTo-InfisicalOrganizationObject -Data $org
+    }
 }
 
 function ConvertTo-InfisicalOrganizationObject {

@@ -13,63 +13,66 @@ Describe 'Get-InfisicalOrganization' {
 
     BeforeEach {
         $mockSession = New-MockSession
-        $mockSession.OrganizationId = 'org-session'
         Mock Get-InfisicalSession { return $mockSession } -ModuleName PSInfisical
     }
 
-    Context 'Default (session org)' {
-        It 'Uses session OrganizationId when no -Id specified' {
+    Context 'List organizations' {
+        It 'Returns all organizations' {
             Mock Invoke-InfisicalApi {
                 return @{
-                    organization = @{ id = 'org-session'; name = 'My Org'; slug = 'my-org'; createdAt = '2025-01-01T00:00:00Z' }
+                    organizations = @(
+                        @{ id = 'org-001'; name = 'Acme Corp'; slug = 'acme-corp'; createdAt = '2025-01-01T00:00:00Z' }
+                        @{ id = 'org-002'; name = 'Test Org'; slug = 'test-org'; createdAt = '2025-06-01T00:00:00Z' }
+                    )
                 }
             } -ModuleName PSInfisical
 
             $result = Get-InfisicalOrganization
-            $result.Id | Should -Be 'org-session'
-            $result.Name | Should -Be 'My Org'
-            $result.PSObject.TypeNames | Should -Contain 'InfisicalOrganization'
+            $result | Should -HaveCount 2
+            $result[0].Id | Should -Be 'org-001'
+            $result[0].Name | Should -Be 'Acme Corp'
+            $result[0].PSObject.TypeNames | Should -Contain 'InfisicalOrganization'
+        }
+
+        It 'Calls /api/v1/organization endpoint' {
+            Mock Invoke-InfisicalApi { return @{ organizations = @() } } -ModuleName PSInfisical
+
+            Get-InfisicalOrganization
 
             Should -Invoke Invoke-InfisicalApi -ModuleName PSInfisical -ParameterFilter {
-                $Endpoint -eq '/api/v1/organization/org-session'
+                $Method -eq 'GET' -and $Endpoint -eq '/api/v1/organization'
             }
         }
 
-        It 'Throws when session has no OrganizationId' {
-            $mockSession.OrganizationId = $null
-            { Get-InfisicalOrganization } | Should -Throw '*OrganizationId*'
+        It 'Returns nothing when no organizations' {
+            Mock Invoke-InfisicalApi { return @{ organizations = @() } } -ModuleName PSInfisical
+
+            $result = Get-InfisicalOrganization
+            $result | Should -BeNullOrEmpty
         }
     }
 
     Context 'Get by ID' {
-        It 'Returns a single organization' {
+        It 'Filters to a single organization' {
             Mock Invoke-InfisicalApi {
                 return @{
-                    organization = @{ id = 'org-001'; name = 'Acme Corp'; slug = 'acme-corp'; createdAt = '2025-01-01T00:00:00Z' }
+                    organizations = @(
+                        @{ id = 'org-001'; name = 'Acme Corp'; slug = 'acme-corp'; createdAt = '2025-01-01T00:00:00Z' }
+                        @{ id = 'org-002'; name = 'Other Org'; slug = 'other'; createdAt = '2025-06-01T00:00:00Z' }
+                    )
                 }
             } -ModuleName PSInfisical
 
             $result = Get-InfisicalOrganization -Id 'org-001'
+            $result | Should -HaveCount 1
             $result.Id | Should -Be 'org-001'
             $result.Name | Should -Be 'Acme Corp'
         }
 
-        It 'Calls correct API endpoint with ID' {
-            Mock Invoke-InfisicalApi {
-                return @{
-                    organization = @{ id = 'org-001'; name = 'Test'; slug = 'test'; createdAt = '2025-01-01T00:00:00Z' }
-                }
-            } -ModuleName PSInfisical
-
-            Get-InfisicalOrganization -Id 'org-001'
-
-            Should -Invoke Invoke-InfisicalApi -ModuleName PSInfisical -ParameterFilter {
-                $Method -eq 'GET' -and $Endpoint -eq '/api/v1/organization/org-001'
-            }
-        }
-
         It 'Writes non-terminating error if not found' {
-            Mock Invoke-InfisicalApi { return $null } -ModuleName PSInfisical
+            Mock Invoke-InfisicalApi {
+                return @{ organizations = @( @{ id = 'org-other'; name = 'Other'; slug = 'other'; createdAt = '2025-01-01T00:00:00Z' } ) }
+            } -ModuleName PSInfisical
 
             $result = Get-InfisicalOrganization -Id 'org-missing' -ErrorVariable errs -ErrorAction SilentlyContinue
             $result | Should -BeNullOrEmpty

@@ -349,6 +349,26 @@ function Connect-Infisical {
                 }
 
                 Set-InfisicalSessionToken -Session $session -AuthResponse $authResponse
+
+                # Email login response has no expiresIn — extract exp from JWT claims
+                if ($null -eq $session.TokenExpiry) {
+                    try {
+                        $tokenStr = $authResponse.accessToken
+                        $parts = $tokenStr.Split('.')
+                        if ($parts.Count -ge 2) {
+                            $payload = $parts[1].Replace('-', '+').Replace('_', '/')
+                            switch ($payload.Length % 4) { 2 { $payload += '==' } 3 { $payload += '=' } }
+                            $jwtClaims = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($payload)) | ConvertFrom-Json
+                            if ($null -ne $jwtClaims.PSObject.Properties['exp']) {
+                                $session.TokenExpiry = [datetime]::UnixEpoch.AddSeconds($jwtClaims.exp)
+                            }
+                        }
+                    }
+                    catch {
+                        Write-Verbose "Connect-Infisical: Could not extract token expiry from JWT: $($_.Exception.Message)"
+                    }
+                }
+
                 $authResponse = $null
             }
         }
@@ -371,12 +391,25 @@ function Connect-Infisical {
                     $claims = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($jwtPayload)) | ConvertFrom-Json
 
                     if ($claims.identityId) {
+                        # Machine identity JWT — look up identity to get orgId
                         $identityResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v1/identities/$($claims.identityId)" -Session $session
                         if ($null -ne $identityResponse -and $null -ne $identityResponse.identity) {
                             $orgId = if ($identityResponse.identity -is [hashtable]) { $identityResponse.identity['orgId'] } else { $identityResponse.identity.orgId }
                             if (-not [string]::IsNullOrEmpty($orgId)) {
                                 $session.OrganizationId = $orgId
                                 Write-Verbose "Connect-Infisical: Auto-resolved OrganizationId to '$orgId'"
+                            }
+                        }
+                    }
+                    elseif ($claims.userId) {
+                        # User JWT (email/password login) — get orgs from user endpoint
+                        $orgsResponse = Invoke-InfisicalApi -Method GET -Endpoint '/api/v1/organization' -Session $session
+                        if ($null -ne $orgsResponse -and $null -ne $orgsResponse.organizations -and @($orgsResponse.organizations).Count -gt 0) {
+                            $firstOrg = @($orgsResponse.organizations)[0]
+                            $orgId = if ($firstOrg -is [hashtable]) { $firstOrg['id'] } else { $firstOrg.id }
+                            if (-not [string]::IsNullOrEmpty($orgId)) {
+                                $session.OrganizationId = $orgId
+                                Write-Verbose "Connect-Infisical: Auto-resolved OrganizationId to '$orgId' from user organizations"
                             }
                         }
                     }

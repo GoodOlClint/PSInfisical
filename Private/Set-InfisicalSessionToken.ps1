@@ -22,7 +22,8 @@ function Set-InfisicalSessionToken {
     $secureToken.MakeReadOnly()
     $Session.AccessToken = $secureToken
 
-    if ($AuthResponse.expiresIn) {
+    $hasExpiresIn = if ($AuthResponse -is [hashtable]) { $AuthResponse.ContainsKey('expiresIn') } else { $null -ne $AuthResponse.PSObject.Properties['expiresIn'] }
+    if ($hasExpiresIn -and $AuthResponse.expiresIn) {
         $Session.TokenExpiry = [datetime]::UtcNow.AddSeconds($AuthResponse.expiresIn)
     }
 }
