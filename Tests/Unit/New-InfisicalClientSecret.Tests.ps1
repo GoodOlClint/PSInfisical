@@ -14,13 +14,20 @@ Describe 'New-InfisicalClientSecret' {
     }
 
     Context 'Generate client secret' {
-        It 'Creates client secret successfully' {
+        It 'Creates client secret and returns typed object' {
             Mock Invoke-RestMethod {
                 return Get-SampleClientSecretResponse
             } -ModuleName PSInfisical
 
             $result = New-InfisicalClientSecret -IdentityId 'identity-001' -Confirm:$false
             $result | Should -Not -BeNullOrEmpty
+            $result.PSObject.TypeNames | Should -Contain 'InfisicalClientSecret'
+            $result.Id | Should -Be 'cs-id-001'
+            $result.ClientSecret | Should -Be 'cs-generated-secret-value'
+            $result.Description | Should -Be 'Test secret'
+            $result.ClientSecretPrefix | Should -Be 'cs-g'
+            $result.IsRevoked | Should -Be $false
+            $result.CreatedAt | Should -BeOfType [datetime]
             Should -Invoke Invoke-RestMethod -ModuleName PSInfisical -Times 1
         }
 
@@ -35,6 +42,16 @@ Describe 'New-InfisicalClientSecret' {
 
             $result = New-InfisicalClientSecret -IdentityId 'identity-001' -Description 'CI runner' -TTL 86400 -Confirm:$false
             $result | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Always returns object without requiring -PassThru' {
+            Mock Invoke-RestMethod {
+                return Get-SampleClientSecretResponse
+            } -ModuleName PSInfisical
+
+            $result = New-InfisicalClientSecret -IdentityId 'identity-001' -Confirm:$false
+            $result | Should -Not -BeNullOrEmpty
+            $result.ClientSecret | Should -Not -BeNullOrEmpty
         }
     }
 

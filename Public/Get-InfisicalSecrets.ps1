@@ -118,7 +118,7 @@ function Get-InfisicalSecrets {
     $resolvedProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }
 
     $queryParams = @{
-        workspaceId = $resolvedProjectId
+        projectId = $resolvedProjectId
         environment = $resolvedEnvironment
         secretPath  = $SecretPath
     }
@@ -152,7 +152,7 @@ function Get-InfisicalSecrets {
         $queryParams['metadataFilter'] = $filterParts -join ','
     }
 
-    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v4/secrets/raw' -QueryParameters $queryParams -Session $session
+    $response = Invoke-InfisicalApi -Method GET -Endpoint '/api/v4/secrets' -QueryParameters $queryParams -Session $session
 
     if ($null -eq $response -or $null -eq $response.secrets) {
         if ($AsHashtable.IsPresent) {

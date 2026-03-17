@@ -16,7 +16,7 @@ Describe 'Add-InfisicalIdentityAuth' {
     Context 'Attach Universal Auth' {
         It 'Attaches auth with defaults' {
             Mock Invoke-RestMethod {
-                return @{ identityUniversalAuth = @{ accessTokenTTL = 2592000 } }
+                return Get-SampleIdentityAuthResponse
             } -ModuleName PSInfisical
 
             { Add-InfisicalIdentityAuth -IdentityId 'identity-001' -Confirm:$false } | Should -Not -Throw
@@ -28,19 +28,46 @@ Describe 'Add-InfisicalIdentityAuth' {
                 param($Uri, $Method, $Body)
                 $parsed = $Body | ConvertFrom-Json
                 $parsed.accessTokenTTL | Should -Be 3600
-                return @{ identityUniversalAuth = @{} }
+                return Get-SampleIdentityAuthResponse
             } -ModuleName PSInfisical
 
             { Add-InfisicalIdentityAuth -IdentityId 'identity-001' -AccessTokenTTL 3600 -Confirm:$false } | Should -Not -Throw
         }
 
-        It '-PassThru returns auth config' {
+        It '-PassThru returns typed InfisicalIdentityAuth object' {
             Mock Invoke-RestMethod {
-                return @{ identityUniversalAuth = @{ accessTokenTTL = 3600 } }
+                return Get-SampleIdentityAuthResponse
             } -ModuleName PSInfisical
 
             $result = Add-InfisicalIdentityAuth -IdentityId 'identity-001' -PassThru -Confirm:$false
             $result | Should -Not -BeNullOrEmpty
+            $result.PSObject.TypeNames | Should -Contain 'InfisicalIdentityAuth'
+            $result.Id | Should -Be 'auth-config-001'
+            $result.IdentityId | Should -Be 'identity-001'
+            $result.AuthMethod | Should -Be 'universal-auth'
+            $result.ClientId | Should -Be 'client-id-001'
+            $result.AccessTokenTTL | Should -Be 2592000
+            $result.AccessTokenMaxTTL | Should -Be 2592000
+            $result.AccessTokenNumUsesLimit | Should -Be 0
+        }
+
+        It '-PassThru returns correct auth method for non-universal auth' {
+            Mock Invoke-RestMethod {
+                return Get-SampleIdentityAuthResponse -AuthMethod 'aws-auth'
+            } -ModuleName PSInfisical
+
+            $result = Add-InfisicalIdentityAuth -IdentityId 'identity-001' -AuthMethod 'aws-auth' -PassThru -Confirm:$false
+            $result | Should -Not -BeNullOrEmpty
+            $result.AuthMethod | Should -Be 'aws-auth'
+        }
+
+        It 'Returns nothing without -PassThru' {
+            Mock Invoke-RestMethod {
+                return Get-SampleIdentityAuthResponse
+            } -ModuleName PSInfisical
+
+            $result = Add-InfisicalIdentityAuth -IdentityId 'identity-001' -Confirm:$false
+            $result | Should -BeNullOrEmpty
         }
     }
 

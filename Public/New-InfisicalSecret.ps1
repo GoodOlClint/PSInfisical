@@ -183,7 +183,7 @@ function New-InfisicalSecret {
         $response = $null
         $usedUpdate = $false
         try {
-            $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v4/secrets/raw/$encodedName" -Body $body -Session $session
+            $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v4/secrets/$encodedName" -Body $body -Session $session
         }
         catch {
             if ($Force.IsPresent) {

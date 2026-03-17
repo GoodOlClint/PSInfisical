@@ -82,13 +82,13 @@ function Get-InfisicalSecretVersion {
 
     # Fetch the current secret first to determine the current version number
     $queryParams = @{
-        workspaceId = $resolvedProjectId
+        projectId = $resolvedProjectId
         environment = $resolvedEnvironment
         secretPath  = $SecretPath
     }
 
     $encodedName = [System.Uri]::EscapeDataString($Name)
-    $currentResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/raw/$encodedName" -QueryParameters $queryParams -Session $session
+    $currentResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/$encodedName" -QueryParameters $queryParams -Session $session
 
     if ($null -eq $currentResponse -or $null -eq $currentResponse.secret) {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(
@@ -109,13 +109,13 @@ function Get-InfisicalSecretVersion {
     # Retrieve each version by specifying the version query parameter
     for ($v = $currentVersion; $v -gt ($currentVersion - $versionsToFetch); $v--) {
         $versionParams = @{
-            workspaceId = $resolvedProjectId
+            projectId = $resolvedProjectId
             environment = $resolvedEnvironment
             secretPath  = $SecretPath
             version     = $v
         }
 
-        $versionResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/raw/$encodedName" -QueryParameters $versionParams -Session $session
+        $versionResponse = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/$encodedName" -QueryParameters $versionParams -Session $session
 
         if ($null -ne $versionResponse -and $null -ne $versionResponse.secret) {
             $secretData = $versionResponse.secret

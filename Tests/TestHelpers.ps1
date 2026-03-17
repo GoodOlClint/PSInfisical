@@ -385,8 +385,50 @@ function Get-SampleIdentitiesListResponse {
 # Sample API response for client secret creation
 function Get-SampleClientSecretResponse {
     return @{
-        clientSecret   = 'cs-generated-secret-value'
-        clientSecretId = 'cs-id-001'
+        clientSecret     = 'cs-generated-secret-value'
+        clientSecretData = @{
+            id                     = 'cs-id-001'
+            description            = 'Test secret'
+            clientSecretPrefix     = 'cs-g'
+            clientSecretNumUses    = 0
+            clientSecretTTL        = 0
+            isClientSecretRevoked  = $false
+            createdAt              = '2024-06-01T10:00:00Z'
+            updatedAt              = '2024-06-01T10:00:00Z'
+        }
+    }
+}
+
+# Sample API response for adding identity auth
+function Get-SampleIdentityAuthResponse {
+    param(
+        [string] $AuthMethod = 'universal-auth'
+    )
+    $parts = $AuthMethod -split '-'
+    $pascalParts = $parts | ForEach-Object { $_.Substring(0,1).ToUpper() + $_.Substring(1) }
+    $key = 'identity' + ($pascalParts -join '')
+    return @{
+        $key = @{
+            id                      = 'auth-config-001'
+            clientId                = 'client-id-001'
+            accessTokenTTL          = 2592000
+            accessTokenMaxTTL       = 2592000
+            accessTokenNumUsesLimit = 0
+        }
+    }
+}
+
+# Sample API response for adding a project member
+function Get-SampleAddProjectMemberResponse {
+    return @{
+        identityMembership = @{
+            id         = 'membership-001'
+            projectId  = 'test-project-id'
+            identityId = 'identity-001'
+            role       = 'member'
+            createdAt  = '2024-06-01T10:00:00Z'
+            updatedAt  = '2024-06-01T10:00:00Z'
+        }
     }
 }
 

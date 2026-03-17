@@ -71,7 +71,7 @@ function ConvertTo-InfisicalBody {
     }
 
     $body = @{
-        workspaceId = $resolvedProjectId
+        projectId = $resolvedProjectId
         environment = $resolvedEnvironment
         secretPath  = $SecretPath
     }

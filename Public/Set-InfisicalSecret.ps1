@@ -175,7 +175,7 @@ function Set-InfisicalSecret {
             $body = ConvertTo-InfisicalBody @bodyParams
 
             $encodedName = [System.Uri]::EscapeDataString($Name)
-            $response = Invoke-InfisicalApi -Method PATCH -Endpoint "/api/v4/secrets/raw/$encodedName" -Body $body -Session $session
+            $response = Invoke-InfisicalApi -Method PATCH -Endpoint "/api/v4/secrets/$encodedName" -Body $body -Session $session
 
             if ($PassThru.IsPresent -and $null -ne $response -and $null -ne $response.secret) {
                 $resolvedProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }

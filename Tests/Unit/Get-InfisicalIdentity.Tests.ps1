@@ -57,6 +57,39 @@ Describe 'Get-InfisicalIdentity' {
         }
     }
 
+    Context 'List identities with membership-wrapped response' {
+        It 'Unwraps nested identity from membership wrapper' {
+            Mock Invoke-RestMethod {
+                return @{
+                    identities = @(
+                        @{
+                            id         = 'membership-001'
+                            role       = 'admin'
+                            orgId      = 'org-123'
+                            identityId = 'identity-real-001'
+                            createdAt  = '2025-01-01T00:00:00Z'
+                            updatedAt  = '2025-06-01T00:00:00Z'
+                            identity   = @{
+                                name                = 'deploy-agent'
+                                id                  = 'identity-real-001'
+                                hasDeleteProtection = $false
+                                authMethods         = @('universal-auth')
+                            }
+                        }
+                    )
+                }
+            } -ModuleName PSInfisical
+
+            $results = Get-InfisicalIdentity -OrganizationId 'org-123'
+            $results | Should -HaveCount 1
+            $results[0].Id | Should -Be 'identity-real-001'
+            $results[0].Name | Should -Be 'deploy-agent'
+            $results[0].OrganizationId | Should -Be 'org-123'
+            $results[0].Role | Should -Be 'admin'
+            $results[0].AuthMethods | Should -Contain 'universal-auth'
+        }
+    }
+
     Context 'Empty results' {
         It 'Returns nothing when no identities exist' {
             Mock Invoke-RestMethod { return @{ identities = @() } } -ModuleName PSInfisical

@@ -83,13 +83,13 @@ function Get-InfisicalSecret {
     $resolvedProjectId = if ([string]::IsNullOrEmpty($ProjectId)) { $session.ProjectId } else { $ProjectId }
 
     $queryParams = @{
-        workspaceId = $resolvedProjectId
+        projectId = $resolvedProjectId
         environment = $resolvedEnvironment
         secretPath  = $SecretPath
     }
 
     $encodedName = [System.Uri]::EscapeDataString($Name)
-    $response = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/raw/$encodedName" -QueryParameters $queryParams -Session $session
+    $response = Invoke-InfisicalApi -Method GET -Endpoint "/api/v4/secrets/$encodedName" -QueryParameters $queryParams -Session $session
 
     if ($null -eq $response -or $null -eq $response.secret) {
         $errorRecord = [System.Management.Automation.ErrorRecord]::new(

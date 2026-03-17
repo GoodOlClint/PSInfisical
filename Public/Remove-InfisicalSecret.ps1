@@ -90,7 +90,7 @@ function Remove-InfisicalSecret {
             $body = ConvertTo-InfisicalBody @bodyParams
 
             $encodedName = [System.Uri]::EscapeDataString($Name)
-            $response = Invoke-InfisicalApi -Method DELETE -Endpoint "/api/v4/secrets/raw/$encodedName" -Body $body -Session $session
+            $response = Invoke-InfisicalApi -Method DELETE -Endpoint "/api/v4/secrets/$encodedName" -Body $body -Session $session
 
             if ($null -eq $response) {
                 $errorRecord = [System.Management.Automation.ErrorRecord]::new(

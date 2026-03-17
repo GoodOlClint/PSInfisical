@@ -25,12 +25,12 @@ function Test-InfisicalApiCapability {
 
     # Probe v4 secrets endpoint with a lightweight GET (will 400 or 200 if route exists, 404 if not)
     foreach ($version in @('v4', 'v3')) {
-        $probeUri = "$baseUri/api/$version/secrets/raw"
+        $probeUri = "$baseUri/api/$version/secrets"
         $key = if ($version -eq 'v4') { 'SecretsV4' } else { 'SecretsV3' }
         try {
             # Use the list endpoint with required params -- even if the query fails with a
             # permission/validation error, a non-404 response means the route exists.
-            $null = Invoke-RestMethod -Uri "$probeUri`?workspaceId=$($Session.ProjectId)&environment=$($Session.DefaultEnvironment)&secretPath=/" `
+            $null = Invoke-RestMethod -Uri "$probeUri`?projectId=$($Session.ProjectId)&environment=$($Session.DefaultEnvironment)&secretPath=/" `
                 -Method GET -Headers $headers -TimeoutSec 10 -ErrorAction Stop
             $capabilities[$key] = $true
         }

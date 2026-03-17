@@ -31,8 +31,11 @@ function Add-InfisicalProjectMember {
 
         Grants viewer access to a specific project.
 
+    .PARAMETER PassThru
+        Return the membership as a PSCustomObject.
+
     .OUTPUTS
-        PSCustomObject with membership details.
+        PSCustomObject (InfisicalProjectMembership) when -PassThru is specified; otherwise, no output.
 
     .LINK
         Get-InfisicalProjectMember
@@ -51,7 +54,10 @@ function Add-InfisicalProjectMember {
         [string] $Role,
 
         [Parameter()]
-        [string] $ProjectId
+        [string] $ProjectId,
+
+        [Parameter()]
+        [switch] $PassThru
     )
 
     $session = Get-InfisicalSession
@@ -65,6 +71,32 @@ function Add-InfisicalProjectMember {
 
         $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v2/workspace/$resolvedProjectId/identity-memberships/$IdentityId" -Body $body -Session $session
 
-        return $response
+        if ($PassThru.IsPresent -and $null -ne $response) {
+            $membership = if ($response -is [hashtable] -and $response.ContainsKey('identityMembership')) { $response['identityMembership'] } elseif ($response -isnot [hashtable] -and $response.PSObject.Properties['identityMembership']) { $response.identityMembership } else { $null }
+
+            if ($null -eq $membership) { return $response }
+
+            $id = if ($membership -is [hashtable] -and $membership.ContainsKey('id')) { $membership['id'] } elseif ($membership -isnot [hashtable] -and $membership.id) { $membership.id } else { '' }
+            $projectIdOut = if ($membership -is [hashtable] -and $membership.ContainsKey('projectId')) { $membership['projectId'] } elseif ($membership -isnot [hashtable] -and $membership.PSObject.Properties['projectId']) { $membership.projectId } else { $resolvedProjectId }
+            $identityIdOut = if ($membership -is [hashtable] -and $membership.ContainsKey('identityId')) { $membership['identityId'] } elseif ($membership -isnot [hashtable] -and $membership.PSObject.Properties['identityId']) { $membership.identityId } else { $IdentityId }
+            $roleOut = if ($membership -is [hashtable] -and $membership.ContainsKey('role')) { $membership['role'] } elseif ($membership -isnot [hashtable] -and $membership.PSObject.Properties['role']) { $membership.role } else { $Role }
+
+            $createdAt = [datetime]::MinValue
+            $updatedAt = [datetime]::MinValue
+            $rawCreated = if ($membership -is [hashtable] -and $membership.ContainsKey('createdAt')) { $membership['createdAt'] } elseif ($membership -isnot [hashtable] -and $membership.PSObject.Properties['createdAt']) { $membership.createdAt } else { $null }
+            $rawUpdated = if ($membership -is [hashtable] -and $membership.ContainsKey('updatedAt')) { $membership['updatedAt'] } elseif ($membership -isnot [hashtable] -and $membership.PSObject.Properties['updatedAt']) { $membership.updatedAt } else { $null }
+            if ($rawCreated) { [void][datetime]::TryParse($rawCreated, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$createdAt) }
+            if ($rawUpdated) { [void][datetime]::TryParse($rawUpdated, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::None, [ref]$updatedAt) }
+
+            return [PSCustomObject]@{
+                PSTypeName = 'InfisicalProjectMembership'
+                Id         = $id
+                ProjectId  = $projectIdOut
+                IdentityId = $identityIdOut
+                Role       = $roleOut
+                CreatedAt  = $createdAt
+                UpdatedAt  = $updatedAt
+            }
+        }
     }
 }

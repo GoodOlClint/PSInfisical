@@ -123,7 +123,37 @@ function Add-InfisicalIdentityAuth {
         $response = Invoke-InfisicalApi -Method POST -Endpoint "/api/v1/auth/$AuthMethod/identities/$IdentityId" -Body $body -Session $session
 
         if ($PassThru.IsPresent -and $null -ne $response) {
-            return $response
+            # Find the auth config in the response — the key varies by auth method
+            # (e.g., identityUniversalAuth, identityAwsAuth, identityAzureAuth)
+            $authData = $null
+            $responseProperties = if ($response -is [hashtable]) { $response.Keys } else { $response.PSObject.Properties.Name }
+            foreach ($propName in $responseProperties) {
+                if ($propName -like 'identity*Auth') {
+                    $authData = if ($response -is [hashtable]) { $response[$propName] } else { $response.$propName }
+                    break
+                }
+            }
+
+            if ($null -eq $authData) {
+                return $response
+            }
+
+            $id = if ($authData -is [hashtable] -and $authData.ContainsKey('id')) { $authData['id'] } elseif ($authData -isnot [hashtable] -and $authData.id) { $authData.id } else { '' }
+            $clientId = if ($authData -is [hashtable] -and $authData.ContainsKey('clientId')) { $authData['clientId'] } elseif ($authData -isnot [hashtable] -and $authData.PSObject.Properties['clientId']) { $authData.clientId } else { $null }
+            $tokenTTL = if ($authData -is [hashtable] -and $authData.ContainsKey('accessTokenTTL')) { $authData['accessTokenTTL'] } elseif ($authData -isnot [hashtable] -and $authData.PSObject.Properties['accessTokenTTL']) { $authData.accessTokenTTL } else { 0 }
+            $tokenMaxTTL = if ($authData -is [hashtable] -and $authData.ContainsKey('accessTokenMaxTTL')) { $authData['accessTokenMaxTTL'] } elseif ($authData -isnot [hashtable] -and $authData.PSObject.Properties['accessTokenMaxTTL']) { $authData.accessTokenMaxTTL } else { 0 }
+            $tokenNumUses = if ($authData -is [hashtable] -and $authData.ContainsKey('accessTokenNumUsesLimit')) { $authData['accessTokenNumUsesLimit'] } elseif ($authData -isnot [hashtable] -and $authData.PSObject.Properties['accessTokenNumUsesLimit']) { $authData.accessTokenNumUsesLimit } else { 0 }
+
+            return [PSCustomObject]@{
+                PSTypeName              = 'InfisicalIdentityAuth'
+                Id                      = $id
+                IdentityId              = $IdentityId
+                AuthMethod              = $AuthMethod
+                ClientId                = $clientId
+                AccessTokenTTL          = $tokenTTL
+                AccessTokenMaxTTL       = $tokenMaxTTL
+                AccessTokenNumUsesLimit = $tokenNumUses
+            }
         }
     }
 }

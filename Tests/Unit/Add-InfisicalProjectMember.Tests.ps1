@@ -14,13 +14,30 @@ Describe 'Add-InfisicalProjectMember' {
     }
 
     Context 'Grant access' {
-        It 'Adds identity to project' {
+        It 'Adds identity to project silently without -PassThru' {
             Mock Invoke-RestMethod {
-                return @{ identityMembership = @{ role = 'member' } }
+                return Get-SampleAddProjectMemberResponse
             } -ModuleName PSInfisical
 
-            { Add-InfisicalProjectMember -IdentityId 'identity-001' -Role 'member' -Confirm:$false } | Should -Not -Throw
+            $result = Add-InfisicalProjectMember -IdentityId 'identity-001' -Role 'member' -Confirm:$false
+            $result | Should -BeNullOrEmpty
             Should -Invoke Invoke-RestMethod -ModuleName PSInfisical -Times 1
+        }
+
+        It '-PassThru returns typed InfisicalProjectMembership object' {
+            Mock Invoke-RestMethod {
+                return Get-SampleAddProjectMemberResponse
+            } -ModuleName PSInfisical
+
+            $result = Add-InfisicalProjectMember -IdentityId 'identity-001' -Role 'member' -PassThru -Confirm:$false
+            $result | Should -Not -BeNullOrEmpty
+            $result.PSObject.TypeNames | Should -Contain 'InfisicalProjectMembership'
+            $result.Id | Should -Be 'membership-001'
+            $result.ProjectId | Should -Be 'test-project-id'
+            $result.IdentityId | Should -Be 'identity-001'
+            $result.Role | Should -Be 'member'
+            $result.CreatedAt | Should -BeOfType [datetime]
+            $result.UpdatedAt | Should -BeOfType [datetime]
         }
     }
 
