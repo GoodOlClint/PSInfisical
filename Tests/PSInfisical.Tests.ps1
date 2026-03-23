@@ -22,10 +22,10 @@ Describe 'PSInfisical Module' {
             { Test-ModuleManifest -Path $manifestPath -ErrorAction Stop } | Should -Not -Throw
         }
 
-        It 'Manifest version is 0.4.0' {
+        It 'Manifest version is 0.4.1' {
             $manifestPath = Join-Path -Path $PSScriptRoot -ChildPath '../PSInfisical.psd1'
             $manifest = Test-ModuleManifest -Path $manifestPath
-            $manifest.Version.ToString() | Should -Be '0.4.0'
+            $manifest.Version.ToString() | Should -Be '0.4.1'
         }
     }
 
