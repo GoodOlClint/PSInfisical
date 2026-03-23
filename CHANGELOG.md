@@ -5,6 +5,17 @@ All notable changes to PSInfisical will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-03-23
+
+### Fixed
+
+- Metadata-only release to fix PSGallery tag indexing. The 0.4.0 publication did not displace the
+  unlisted 0.2.0 as the gallery's "latest" version pointer, causing tag-based searches (`Find-Module
+  -Tag Infisical`) to return no results and the package URL to redirect to 0.2.0. Publishing a new
+  version forces PSGallery to re-index and update the redirect.
+- Added `PSInfisical` to the module tags so `Find-Module -Tag PSInfisical` works.
+- Updated `ReleaseNotes` to accurately describe changes (previously said "Initial release").
+
 ## [0.4.0] - 2026-03-17
 
 ### Added
