@@ -612,9 +612,13 @@ function Get-SampleEnvironmentResponse {
 }
 
 # Sample auth response (as returned by /v1/auth/universal-auth/login)
+# accessToken is a structurally-valid JWT with three base64url segments — header
+# ({"alg":"HS256","typ":"JWT"}), payload ({"exp":9999999999}), signature — so
+# any future tightening of session-side JWT parsing (e.g. exp-claim extraction)
+# doesn't silently break tests that flow through authentication.
 function Get-SampleAuthResponse {
     return @{
-        accessToken       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-token'
+        accessToken       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.MOCK_SIGNATURE'
         expiresIn         = 7200
         accessTokenMaxTTL = 86400
         tokenType         = 'Bearer'

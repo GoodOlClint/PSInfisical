@@ -489,6 +489,23 @@ Describe 'PSInfisical.Extension' {
             $script:folderCreates[2].Path | Should -Be '/worklab/winhost'
         }
 
+        It 'Set-Secret: rethrows non-conflict folder errors (e.g. 403)' {
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                if ($Method -eq 'GET' -and $Uri -match '/api/v4/secrets/') {
+                    return $null
+                }
+                if ($Method -eq 'POST' -and $Uri -match '/api/v2/folders') {
+                    throw [System.UnauthorizedAccessException]::new('Access denied. Check machine identity permissions for this resource.')
+                }
+                return $null
+            } -ModuleName PSInfisical
+
+            { Set-Secret -Name 'denied/foo/bar' -Secret 'v' `
+                -VaultName $script:vaultName -AdditionalParameters $script:vaultParams -ErrorAction Stop } |
+                Should -Throw '*Access denied*'
+        }
+
         It 'Set-Secret: does not create folders when the secret already exists at a sub-path' {
             $script:folderCalls = 0
             Mock Invoke-RestMethod {
@@ -524,7 +541,9 @@ Describe 'PSInfisical.Extension' {
                 -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
 
             $script:capturedUri | Should -Match '/api/v4/secrets/winvm'
-            $script:capturedUri | Should -Match 'secretPath=%2Fworklab%2Fwinhost%2Fadmin'
+            # PS 5.1's Uri.EscapeDataString leaves '/' unencoded in query values,
+            # while PS 7 emits %2F — match either.
+            $script:capturedUri | Should -Match 'secretPath=(?:%2F|/)worklab(?:%2F|/)winhost(?:%2F|/)admin'
         }
 
         It 'Remove-Secret: deletes the bare key at the resolved sub-path' {
@@ -582,6 +601,17 @@ Describe 'PSInfisical.Extension' {
                 param($s)
                 $script:InfisicalSession = $s
             }
+        }
+
+        It 'Unprotect-SecureString: returns plaintext for the supplied SecureString' {
+            $result = InModuleScope PSInfisical.Extension {
+                $ss = [System.Security.SecureString]::new()
+                foreach ($c in 'hunter2'.ToCharArray()) { $ss.AppendChar($c) }
+                $ss.MakeReadOnly()
+                Unprotect-SecureString -Secret $ss
+            }
+
+            $result | Should -Be 'hunter2'
         }
 
         It 'ConvertTo-InfisicalSecretPayload: SecureString tagged as SecureString' {
@@ -671,6 +701,20 @@ Describe 'PSInfisical.Extension' {
             $result | Should -BeOfType [System.Management.Automation.PSCredential]
             $result.UserName | Should -Be 'alice'
             [System.Net.NetworkCredential]::new('', $result.Password).Password | Should -Be 's3cret!'
+        }
+
+        It 'ConvertFrom-InfisicalSecretPayload: Hashtable rebuilds nested objects as Hashtables' {
+            $result = InModuleScope PSInfisical.Extension {
+                $json = '{"a":1,"nested":{"b":2,"deeper":{"c":3}}}'
+                ConvertFrom-InfisicalSecretPayload -Value $json -Type 'Hashtable'
+            }
+
+            $result | Should -BeOfType [hashtable]
+            $result['a'] | Should -Be 1
+            $result['nested'] | Should -BeOfType [hashtable]
+            $result['nested']['b'] | Should -Be 2
+            $result['nested']['deeper'] | Should -BeOfType [hashtable]
+            $result['nested']['deeper']['c'] | Should -Be 3
         }
 
         It 'ConvertFrom-InfisicalSecretPayload: Hashtable rebuilds nested SecureStrings' {

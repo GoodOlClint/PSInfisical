@@ -290,10 +290,106 @@ function Initialize-InfisicalFolderPath {
             New-InfisicalFolder -Name $segment -SecretPath $currentPath -Confirm:$false -ErrorAction Stop | Out-Null
         }
         catch {
-            Write-Verbose "Initialize-InfisicalFolderPath: folder '$segment' at '$currentPath' not created: $($_.Exception.Message)"
+            # Only swallow conflict-shaped errors (folder already exists); rethrow
+            # everything else so the caller sees permission/network/server
+            # failures at the right layer instead of as a cryptic downstream
+            # secret-write error.
+            $msg = [string]$_.Exception.Message
+            if ($msg -notmatch '(?i)already\s*exists|conflict|duplicate|HTTP\s*409|HTTP\s*400') {
+                throw
+            }
+            Write-Verbose "Initialize-InfisicalFolderPath: folder '$segment' at '$currentPath' already exists; skipping. ($msg)"
         }
         $currentPath = if ($currentPath -eq '/') { "/$segment" } else { "$currentPath/$segment" }
     }
+}
+
+function Unprotect-SecureString {
+    <#
+    .SYNOPSIS
+        Returns the plaintext value of a SecureString and zeros the unmanaged
+        buffer immediately after the copy.
+
+    .DESCRIPTION
+        SecretManagement values pass through plaintext on their way into
+        Infisical's JSON storage model — there is no avoiding the managed string
+        allocation. The next-best thing is to ensure the unmanaged buffer that
+        backed the SecureString is wiped right away rather than waiting for
+        NetworkCredential's finalizer to run on a future GC pass.
+
+        The managed string returned by this function still lives until garbage
+        collection (PowerShell's string interning makes it impossible to wipe
+        deterministically), but the window between extraction and managed-heap
+        clearing is narrowed, and the unmanaged buffer is never reachable after
+        return.
+
+    .OUTPUTS
+        [string]
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)]
+        [ValidateNotNull()]
+        [System.Security.SecureString] $Secret
+    )
+
+    $bstr = [System.IntPtr]::Zero
+    try {
+        $bstr = [System.Runtime.InteropServices.Marshal]::SecureStringToGlobalAllocUnicode($Secret)
+        return [System.Runtime.InteropServices.Marshal]::PtrToStringUni($bstr)
+    }
+    finally {
+        if ($bstr -ne [System.IntPtr]::Zero) {
+            [System.Runtime.InteropServices.Marshal]::ZeroFreeGlobalAllocUnicode($bstr)
+        }
+    }
+}
+
+function ConvertTo-HashtableTree {
+    <#
+    .SYNOPSIS
+        Recursively converts PSCustomObject nodes in a deserialised JSON graph
+        into Hashtables, preserving arrays and primitives in place.
+
+    .DESCRIPTION
+        ConvertFrom-Json emits PSCustomObject for every JSON object. When a
+        caller stored @{ a = @{ b = 1 } } on Set-Secret, Get-Secret should give
+        them a Hashtable of Hashtables back, not a Hashtable wrapping a
+        PSCustomObject. This walks the graph and rebuilds nested objects as
+        Hashtables, leaving the SecureString marker sentinel untouched (its
+        caller in ConvertFrom-InfisicalSecretPayload inspects it directly).
+
+    .OUTPUTS
+        [object] — same shape as the input with PSCustomObject nodes replaced
+        by Hashtables.
+    #>
+    [CmdletBinding()]
+    [OutputType([object])]
+    param(
+        [Parameter(Mandatory)]
+        [AllowNull()]
+        [object] $InputObject
+    )
+
+    if ($null -eq $InputObject) { return $null }
+
+    if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
+        $ht = @{}
+        foreach ($prop in $InputObject.PSObject.Properties) {
+            $ht[$prop.Name] = ConvertTo-HashtableTree -InputObject $prop.Value
+        }
+        return $ht
+    }
+
+    if ($InputObject -is [System.Collections.IList] -and -not ($InputObject -is [string])) {
+        $list = foreach ($item in $InputObject) {
+            ConvertTo-HashtableTree -InputObject $item
+        }
+        return ,@($list)
+    }
+
+    return $InputObject
 }
 
 function ConvertTo-InfisicalSecretPayload {
@@ -327,13 +423,13 @@ function ConvertTo-InfisicalSecretPayload {
 
     if ($Secret -is [System.Security.SecureString]) {
         return @{
-            Value = [System.Net.NetworkCredential]::new('', $Secret).Password
+            Value = Unprotect-SecureString -Secret $Secret
             Type  = 'SecureString'
         }
     }
 
     if ($Secret -is [System.Management.Automation.PSCredential]) {
-        $pwPlain = [System.Net.NetworkCredential]::new('', $Secret.Password).Password
+        $pwPlain = Unprotect-SecureString -Secret $Secret.Password
         $json = @{ UserName = $Secret.UserName; Password = $pwPlain } | ConvertTo-Json -Compress
         return @{ Value = $json; Type = 'PSCredential' }
     }
@@ -352,7 +448,7 @@ function ConvertTo-InfisicalSecretPayload {
             if ($value -is [System.Security.SecureString]) {
                 $serialised[[string]$key] = @{
                     $script:SecureStringMarkerKey = $true
-                    v = [System.Net.NetworkCredential]::new('', $value).Password
+                    v = Unprotect-SecureString -Secret $value
                 }
             }
             else {
@@ -383,6 +479,10 @@ function ConvertFrom-InfisicalSecretPayload {
         (e.g. legacy or UI-created secrets) the value is returned as a
         SecureString — that was the extension's behaviour before typed payloads
         were introduced and preserves backward compatibility.
+
+        For 'Hashtable' payloads, nested JSON objects are recursively converted
+        back into Hashtables so the input/output shape is symmetric: what the
+        caller handed to Set-Secret is what they get back from Get-Secret.
 
     .OUTPUTS
         [object] — concrete type depends on $Type.
@@ -422,10 +522,14 @@ function ConvertFrom-InfisicalSecretPayload {
                 if ($entry -is [PSCustomObject] -and
                     $entry.PSObject.Properties[$script:SecureStringMarkerKey] -and
                     $entry.$($script:SecureStringMarkerKey)) {
+                    # Sentinel-wrapped SecureString — rebuild it directly without
+                    # descending further into the marker object.
                     $ht[$prop.Name] = ConvertTo-PlainSecureString -Plain ([string]$entry.v)
                 }
                 else {
-                    $ht[$prop.Name] = $entry
+                    # Recursively rebuild nested PSCustomObjects as Hashtables so
+                    # the in/out shape is symmetric for arbitrary depth.
+                    $ht[$prop.Name] = ConvertTo-HashtableTree -InputObject $entry
                 }
             }
             return $ht
