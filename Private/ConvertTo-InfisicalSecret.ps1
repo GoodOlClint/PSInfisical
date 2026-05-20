@@ -25,7 +25,8 @@ function ConvertTo-InfisicalSecret {
     $secret = [InfisicalSecret]::new()
     $secret.Name = $SecretData.secretKey
     $secret.Environment = $Environment
-    $secret.Path = if ($SecretData.PSObject.Properties['secretPath'] -and $SecretData.secretPath) { $SecretData.secretPath } else { $FallbackPath }
+    $hasSecretPath = ($SecretData -is [hashtable] -and $SecretData.ContainsKey('secretPath')) -or ($SecretData -isnot [hashtable] -and $SecretData.PSObject.Properties['secretPath'])
+    $secret.Path = if ($hasSecretPath -and $SecretData.secretPath) { $SecretData.secretPath } else { $FallbackPath }
     $secret.ProjectId = $ProjectId
     $secret.Version = if ($null -ne $SecretData.version) { [int]$SecretData.version } else { 0 }
     $secret.Comment = if ($SecretData.secretComment) { $SecretData.secretComment } else { '' }

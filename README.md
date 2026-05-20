@@ -478,11 +478,12 @@ Unregister-SecretVault -Name 'Infisical'
 
 ### SecretManagement Behavior Notes
 
-- **All secrets are `SecureString`** — `Get-SecretInfo` reports every secret as `SecretType.SecureString`. Use `-AsPlainText` with `Get-Secret` to get the plaintext value.
+- **Hierarchical names** — a `-Name` containing `/` is split on the last slash: the prefix is appended to the vault's configured `SecretPath` and the final segment becomes the Infisical secret key. `Set-Secret -Name 'team/svc/db' -Secret $v` stores `db` under `/team/svc`, creating any missing folders along the way. The same `-Name` round-trips through `Get-Secret` / `Remove-Secret`, and `Get-SecretInfo` returns slash-qualified names (recursive listing under `SecretPath`).
+- **All `SecretType`s are supported** — `String`, `SecureString`, `PSCredential`, `Hashtable`, and `ByteArray` round-trip through `Set-Secret` / `Get-Secret`. The original type is recorded in Infisical's secret metadata under the reserved key `PSInfisicalSecretType` (other metadata keys you set in the Infisical UI are preserved across updates). Legacy or UI-created secrets without this tag are returned as `SecureString`, matching the prior behavior.
 - **`Set-Secret` is an upsert** — it creates the secret if it doesn't exist or updates it if it does.
 - **`Remove-Secret` throws on missing secrets** — unlike `Get-Secret` which returns `$null`, removing a non-existent secret will throw an error.
 - **Session caching** — the extension caches authenticated sessions per vault name. Sessions are automatically refreshed when they expire (Universal Auth only).
-- **Folder scoping** — the `SecretPath` vault parameter scopes all operations to a specific Infisical folder. To access secrets in different folders, register separate vaults with different `SecretPath` values.
+- **Folder scoping** — the `SecretPath` vault parameter sets the base folder all operations are relative to. Combined with hierarchical names, one vault can address an arbitrarily deep tree; alternatively, register separate vaults with different `SecretPath` values for stricter isolation.
 
 ## SecureString Guidance
 

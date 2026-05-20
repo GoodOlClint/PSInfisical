@@ -5,6 +5,19 @@ All notable changes to PSInfisical will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-05-19
+
+### Added
+
+- SecretManagement extension now accepts hierarchical names: `Set-Secret -Name 'team/svc/db' -Secret $v` stores `db` under the `/team/svc` folder (relative to the vault's configured `SecretPath`) and idempotently creates any missing folders along the way. `Get-Secret`, `Remove-Secret`, and `Get-SecretInfo` round-trip the same slash-qualified names.
+- `Get-SecretInfo` now lists recursively so secrets stored under sub-paths are discoverable from the configured base.
+- Full `SecretType` round-trip through the extension — `String`, `SecureString`, `PSCredential`, `Hashtable` (including nested `SecureString` values), and `ByteArray` are serialised on `Set-Secret` and reconstructed on `Get-Secret`. The original type is recorded in Infisical's secret metadata under the reserved key `PSInfisicalSecretType`; existing user metadata is preserved across updates.
+- 16 additional unit tests covering hierarchical naming and `SecretType` round-trip (495 total).
+
+### Fixed
+
+- `ConvertTo-InfisicalSecret` now reads `secretPath` from both hashtable-shaped and `PSCustomObject`-shaped API responses (the prior `PSObject.Properties` check silently fell back to the listing path for hashtable inputs).
+
 ## [0.4.0] - 2026-03-17
 
 ### Added

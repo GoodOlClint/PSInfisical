@@ -349,6 +349,483 @@ Describe 'PSInfisical.Extension' {
         }
     }
 
+    Context 'Hierarchical Names (slash in -Name)' {
+
+        BeforeEach {
+            $mockSession = New-MockSession
+            InModuleScope PSInfisical.Extension -Parameters @{ name = $script:vaultName; s = $mockSession } {
+                param($name, $s)
+                $script:SessionCache[$name] = $s
+            }
+            InModuleScope PSInfisical -Parameters @{ s = $mockSession } {
+                param($s)
+                $script:InfisicalSession = $s
+            }
+        }
+
+        It 'Resolve-InfisicalName: no slash returns name unchanged with base path' {
+            $result = InModuleScope PSInfisical.Extension {
+                Resolve-InfisicalName -Name 'API_KEY' -BasePath '/'
+            }
+
+            $result.Name | Should -Be 'API_KEY'
+            $result.SecretPath | Should -Be '/'
+        }
+
+        It 'Resolve-InfisicalName: splits slash-bearing name into key and sub-path under root' {
+            $result = InModuleScope PSInfisical.Extension {
+                Resolve-InfisicalName -Name 'worklab/winhost/admin/winvm' -BasePath '/'
+            }
+
+            $result.Name | Should -Be 'winvm'
+            $result.SecretPath | Should -Be '/worklab/winhost/admin'
+        }
+
+        It 'Resolve-InfisicalName: joins slash-prefix under a non-root base path' {
+            $result = InModuleScope PSInfisical.Extension {
+                Resolve-InfisicalName -Name 'worklab/winvm' -BasePath '/teams'
+            }
+
+            $result.Name | Should -Be 'winvm'
+            $result.SecretPath | Should -Be '/teams/worklab'
+        }
+
+        It 'Resolve-InfisicalName: leading slash on name is treated relative to base' {
+            $result = InModuleScope PSInfisical.Extension {
+                Resolve-InfisicalName -Name '/worklab/winvm' -BasePath '/teams'
+            }
+
+            $result.Name | Should -Be 'winvm'
+            $result.SecretPath | Should -Be '/teams/worklab'
+        }
+
+        It 'Resolve-InfisicalName: throws when name ends with a slash' {
+            {
+                InModuleScope PSInfisical.Extension {
+                    Resolve-InfisicalName -Name 'worklab/winhost/' -BasePath '/'
+                }
+            } | Should -Throw '*ends with*'
+        }
+
+        It 'Get-RelativeSecretName: bare name when secret sits at the base path' {
+            $result = InModuleScope PSInfisical.Extension {
+                Get-RelativeSecretName -BasePath '/' -SecretPath '/' -Name 'DB_HOST'
+            }
+
+            $result | Should -Be 'DB_HOST'
+        }
+
+        It 'Get-RelativeSecretName: slash-prefixed name when secret sits below the base' {
+            $result = InModuleScope PSInfisical.Extension {
+                Get-RelativeSecretName -BasePath '/' -SecretPath '/worklab/winhost/admin' -Name 'winvm'
+            }
+
+            $result | Should -Be 'worklab/winhost/admin/winvm'
+        }
+
+        It 'Get-RelativeSecretName: relativises against a non-root base path' {
+            $result = InModuleScope PSInfisical.Extension {
+                Get-RelativeSecretName -BasePath '/teams' -SecretPath '/teams/worklab' -Name 'winvm'
+            }
+
+            $result | Should -Be 'worklab/winvm'
+        }
+
+        It 'Set-Secret: routes the bare key and sub-path through the create call' {
+            $capturedCreatePath = $null
+            $capturedCreateName = $null
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                if ($Method -eq 'GET' -and $Uri -match '/api/v4/secrets/') {
+                    return $null  # secret does not yet exist
+                }
+                if ($Method -eq 'POST' -and $Uri -match '/api/v2/folders') {
+                    return @{ folder = @{ id = 'folder-x'; name = 'x' } }
+                }
+                if ($Method -eq 'POST' -and $Uri -match '/api/v4/secrets/') {
+                    $parsed = $Body | ConvertFrom-Json
+                    $script:capturedCreatePath = $parsed.secretPath
+                    $script:capturedCreateName = ($Uri -split '/')[-1] -split '\?' | Select-Object -First 1
+                    return Get-SampleSecretResponse -Name 'winvm' -Value 'host-secret'
+                }
+                return $null
+            } -ModuleName PSInfisical
+
+            $result = Set-Secret -Name 'worklab/winhost/admin/winvm' -Secret 'host-secret' `
+                -VaultName $script:vaultName -AdditionalParameters $script:vaultParams
+
+            $result | Should -BeTrue
+            $script:capturedCreatePath | Should -Be '/worklab/winhost/admin'
+            $script:capturedCreateName | Should -Be 'winvm'
+        }
+
+        It 'Set-Secret: creates each intermediate folder before writing the secret' {
+            $script:folderCreates = @()
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                if ($Method -eq 'GET' -and $Uri -match '/api/v4/secrets/') {
+                    return $null
+                }
+                if ($Method -eq 'POST' -and $Uri -match '/api/v2/folders') {
+                    $parsed = $Body | ConvertFrom-Json
+                    $script:folderCreates += @{ Name = $parsed.name; Path = $parsed.path }
+                    return @{ folder = @{ id = "folder-$($parsed.name)"; name = $parsed.name } }
+                }
+                if ($Method -eq 'POST' -and $Uri -match '/api/v4/secrets/') {
+                    return Get-SampleSecretResponse -Name 'winvm' -Value 'host-secret'
+                }
+                return $null
+            } -ModuleName PSInfisical
+
+            Set-Secret -Name 'worklab/winhost/admin/winvm' -Secret 'host-secret' `
+                -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
+
+            $script:folderCreates.Count | Should -Be 3
+            $script:folderCreates[0].Name | Should -Be 'worklab'
+            $script:folderCreates[0].Path | Should -Be '/'
+            $script:folderCreates[1].Name | Should -Be 'winhost'
+            $script:folderCreates[1].Path | Should -Be '/worklab'
+            $script:folderCreates[2].Name | Should -Be 'admin'
+            $script:folderCreates[2].Path | Should -Be '/worklab/winhost'
+        }
+
+        It 'Set-Secret: does not create folders when the secret already exists at a sub-path' {
+            $script:folderCalls = 0
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                if ($Method -eq 'GET' -and $Uri -match '/api/v4/secrets/') {
+                    return Get-SampleSecretResponse -Name 'winvm' -Value 'old-value'
+                }
+                if ($Method -eq 'POST' -and $Uri -match '/api/v2/folders') {
+                    $script:folderCalls++
+                    return @{ folder = @{ id = 'x'; name = 'x' } }
+                }
+                if ($Method -eq 'PATCH') {
+                    return Get-SampleSecretResponse -Name 'winvm' -Value 'new-value'
+                }
+                return $null
+            } -ModuleName PSInfisical
+
+            Set-Secret -Name 'worklab/winvm' -Secret 'new-value' `
+                -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
+
+            $script:folderCalls | Should -Be 0
+        }
+
+        It 'Get-Secret: looks up the bare key at the resolved sub-path' {
+            $capturedUri = $null
+            Mock Invoke-RestMethod {
+                param($Uri)
+                $script:capturedUri = $Uri
+                return Get-SampleSecretResponse -Name 'winvm' -Value 'host-secret'
+            } -ModuleName PSInfisical
+
+            Get-Secret -Name 'worklab/winhost/admin/winvm' `
+                -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
+
+            $script:capturedUri | Should -Match '/api/v4/secrets/winvm'
+            $script:capturedUri | Should -Match 'secretPath=%2Fworklab%2Fwinhost%2Fadmin'
+        }
+
+        It 'Remove-Secret: deletes the bare key at the resolved sub-path' {
+            $capturedBody = $null
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                if ($Method -eq 'DELETE') {
+                    $script:capturedBody = $Body | ConvertFrom-Json
+                }
+                return @{ secret = @{ secretKey = 'winvm' } }
+            } -ModuleName PSInfisical
+
+            Remove-Secret -Name 'worklab/winvm' `
+                -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
+
+            $script:capturedBody.secretPath | Should -Be '/worklab'
+        }
+
+        It 'Get-SecretInfo: surfaces sub-path secrets with slash-qualified names' {
+            Mock Invoke-RestMethod {
+                return Get-SampleNestedSecretsListResponse
+            } -ModuleName PSInfisical
+
+            $result = @(Get-SecretInfo -VaultName $script:vaultName -AdditionalParameters $script:vaultParams)
+
+            $names = $result.Name | Sort-Object
+            $names | Should -Contain 'FLAT_KEY'
+            $names | Should -Contain 'api/token'
+            $names | Should -Contain 'worklab/winhost/admin/winvm'
+        }
+
+        It 'Get-SecretInfo: requests recursive listing from the API' {
+            $capturedUri = $null
+            Mock Invoke-RestMethod {
+                param($Uri)
+                $script:capturedUri = $Uri
+                return Get-SampleSecretsListResponse
+            } -ModuleName PSInfisical
+
+            Get-SecretInfo -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
+
+            $script:capturedUri | Should -Match 'recursive=true'
+        }
+    }
+
+    Context 'SecretType Round-Trip' {
+
+        BeforeEach {
+            $mockSession = New-MockSession
+            InModuleScope PSInfisical.Extension -Parameters @{ name = $script:vaultName; s = $mockSession } {
+                param($name, $s)
+                $script:SessionCache[$name] = $s
+            }
+            InModuleScope PSInfisical -Parameters @{ s = $mockSession } {
+                param($s)
+                $script:InfisicalSession = $s
+            }
+        }
+
+        It 'ConvertTo-InfisicalSecretPayload: SecureString tagged as SecureString' {
+            $result = InModuleScope PSInfisical.Extension {
+                $ss = [System.Security.SecureString]::new()
+                foreach ($c in 'hunter2'.ToCharArray()) { $ss.AppendChar($c) }
+                ConvertTo-InfisicalSecretPayload -Secret $ss
+            }
+
+            $result.Type | Should -Be 'SecureString'
+            $result.Value | Should -Be 'hunter2'
+        }
+
+        It 'ConvertTo-InfisicalSecretPayload: plain string tagged as String' {
+            $result = InModuleScope PSInfisical.Extension {
+                ConvertTo-InfisicalSecretPayload -Secret 'plain-text-value'
+            }
+
+            $result.Type | Should -Be 'String'
+            $result.Value | Should -Be 'plain-text-value'
+        }
+
+        It 'ConvertTo-InfisicalSecretPayload: PSCredential serialised as JSON' {
+            $result = InModuleScope PSInfisical.Extension {
+                $ss = [System.Security.SecureString]::new()
+                foreach ($c in 's3cret!'.ToCharArray()) { $ss.AppendChar($c) }
+                $ss.MakeReadOnly()
+                $cred = [System.Management.Automation.PSCredential]::new('alice', $ss)
+                ConvertTo-InfisicalSecretPayload -Secret $cred
+            }
+
+            $result.Type | Should -Be 'PSCredential'
+            $parsed = $result.Value | ConvertFrom-Json
+            $parsed.UserName | Should -Be 'alice'
+            $parsed.Password | Should -Be 's3cret!'
+        }
+
+        It 'ConvertTo-InfisicalSecretPayload: byte[] base64-encoded' {
+            $result = InModuleScope PSInfisical.Extension {
+                $bytes = [byte[]] @(1, 2, 3, 255)
+                ConvertTo-InfisicalSecretPayload -Secret $bytes
+            }
+
+            $result.Type | Should -Be 'ByteArray'
+            $result.Value | Should -Be ([System.Convert]::ToBase64String([byte[]] @(1, 2, 3, 255)))
+        }
+
+        It 'ConvertTo-InfisicalSecretPayload: hashtable with nested SecureString preserves the marker' {
+            $result = InModuleScope PSInfisical.Extension {
+                $ss = [System.Security.SecureString]::new()
+                foreach ($c in 'inner-pw'.ToCharArray()) { $ss.AppendChar($c) }
+                $ss.MakeReadOnly()
+                $ht = @{ user = 'bob'; token = $ss }
+                ConvertTo-InfisicalSecretPayload -Secret $ht
+            }
+
+            $result.Type | Should -Be 'Hashtable'
+            $parsed = $result.Value | ConvertFrom-Json
+            $parsed.user | Should -Be 'bob'
+            $parsed.token.__PSInfisicalSecureString__ | Should -BeTrue
+            $parsed.token.v | Should -Be 'inner-pw'
+        }
+
+        It 'ConvertTo-InfisicalSecretPayload: throws on unsupported types' {
+            {
+                InModuleScope PSInfisical.Extension {
+                    ConvertTo-InfisicalSecretPayload -Secret ([datetime]::Now)
+                }
+            } | Should -Throw '*Unsupported -Secret type*'
+        }
+
+        It 'ConvertFrom-InfisicalSecretPayload: missing type tag returns SecureString (legacy)' {
+            $result = InModuleScope PSInfisical.Extension {
+                ConvertFrom-InfisicalSecretPayload -Value 'legacy-value' -Type ''
+            }
+
+            $result | Should -BeOfType [System.Security.SecureString]
+            [System.Net.NetworkCredential]::new('', $result).Password | Should -Be 'legacy-value'
+        }
+
+        It 'ConvertFrom-InfisicalSecretPayload: PSCredential rebuilt from JSON' {
+            $result = InModuleScope PSInfisical.Extension {
+                $json = (@{ UserName = 'alice'; Password = 's3cret!' } | ConvertTo-Json -Compress)
+                ConvertFrom-InfisicalSecretPayload -Value $json -Type 'PSCredential'
+            }
+
+            $result | Should -BeOfType [System.Management.Automation.PSCredential]
+            $result.UserName | Should -Be 'alice'
+            [System.Net.NetworkCredential]::new('', $result.Password).Password | Should -Be 's3cret!'
+        }
+
+        It 'ConvertFrom-InfisicalSecretPayload: Hashtable rebuilds nested SecureStrings' {
+            $result = InModuleScope PSInfisical.Extension {
+                $json = '{"user":"bob","token":{"__PSInfisicalSecureString__":true,"v":"inner-pw"}}'
+                ConvertFrom-InfisicalSecretPayload -Value $json -Type 'Hashtable'
+            }
+
+            $result | Should -BeOfType [hashtable]
+            $result['user'] | Should -Be 'bob'
+            $result['token'] | Should -BeOfType [System.Security.SecureString]
+            [System.Net.NetworkCredential]::new('', $result['token']).Password | Should -Be 'inner-pw'
+        }
+
+        It 'ConvertFrom-InfisicalSecretPayload: ByteArray decoded from base64' {
+            # Keep assertions inside InModuleScope so the byte[] return type is
+            # not unrolled into an Object[] by the pipeline.
+            InModuleScope PSInfisical.Extension {
+                $result = ConvertFrom-InfisicalSecretPayload -Value 'AQID/w==' -Type 'ByteArray'
+                $result.GetType().Name | Should -Be 'Byte[]'
+                $result.Length | Should -Be 4
+                $result[0] | Should -Be 1
+                $result[1] | Should -Be 2
+                $result[2] | Should -Be 3
+                $result[3] | Should -Be 255
+            }
+        }
+
+        It 'Set-Secret: stores PSCredential as JSON and tags the metadata' {
+            $script:capturedBody = $null
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                if ($Method -eq 'GET') { return $null }
+                if ($Method -eq 'POST' -and $Uri -match '/api/v4/secrets/') {
+                    $script:capturedBody = $Body | ConvertFrom-Json
+                    return Get-SampleSecretResponse -Name 'mycred' -Value 'ignored'
+                }
+                return $null
+            } -ModuleName PSInfisical
+
+            $ss = New-TestSecureString -PlainText 'p@ssw0rd'
+            $cred = [System.Management.Automation.PSCredential]::new('alice', $ss)
+            Set-Secret -Name 'mycred' -Secret $cred -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
+
+            $script:capturedBody | Should -Not -BeNullOrEmpty
+            $payload = $script:capturedBody.secretValue | ConvertFrom-Json
+            $payload.UserName | Should -Be 'alice'
+            $payload.Password | Should -Be 'p@ssw0rd'
+
+            $typeMeta = $script:capturedBody.secretMetadata | Where-Object { $_.key -eq 'PSInfisicalSecretType' }
+            $typeMeta | Should -Not -BeNullOrEmpty
+            $typeMeta.value | Should -Be 'PSCredential'
+        }
+
+        It 'Set-Secret: preserves existing user metadata when updating' {
+            $script:capturedBody = $null
+            Mock Invoke-RestMethod {
+                param($Uri, $Method, $Body)
+                if ($Method -eq 'GET') {
+                    return Get-SampleTypedSecretResponse -Name 'kept' -Value 'old' -Metadata @{ owner = 'team-x' }
+                }
+                if ($Method -eq 'PATCH') {
+                    $script:capturedBody = $Body | ConvertFrom-Json
+                    return Get-SampleSecretResponse -Name 'kept' -Value 'new'
+                }
+                return $null
+            } -ModuleName PSInfisical
+
+            Set-Secret -Name 'kept' -Secret 'new-value' -VaultName $script:vaultName -AdditionalParameters $script:vaultParams | Out-Null
+
+            $keys = @($script:capturedBody.secretMetadata | ForEach-Object { $_.key })
+            $keys | Should -Contain 'owner'
+            $keys | Should -Contain 'PSInfisicalSecretType'
+        }
+
+        It 'Get-Secret: rebuilds a PSCredential when the type tag is present' {
+            Mock Invoke-RestMethod {
+                $json = (@{ UserName = 'alice'; Password = 's3cret!' } | ConvertTo-Json -Compress)
+                return Get-SampleTypedSecretResponse -Name 'mycred' -Value $json -Metadata @{ PSInfisicalSecretType = 'PSCredential' }
+            } -ModuleName PSInfisical
+
+            $result = Get-Secret -Name 'mycred' -VaultName $script:vaultName -AdditionalParameters $script:vaultParams
+
+            $result | Should -BeOfType [System.Management.Automation.PSCredential]
+            $result.UserName | Should -Be 'alice'
+            [System.Net.NetworkCredential]::new('', $result.Password).Password | Should -Be 's3cret!'
+        }
+
+        It 'Get-Secret: returns plain string when type tag is String' {
+            Mock Invoke-RestMethod {
+                return Get-SampleTypedSecretResponse -Name 'flat' -Value 'just-a-string' -Metadata @{ PSInfisicalSecretType = 'String' }
+            } -ModuleName PSInfisical
+
+            $result = Get-Secret -Name 'flat' -VaultName $script:vaultName -AdditionalParameters $script:vaultParams
+
+            $result | Should -BeOfType [string]
+            $result | Should -Be 'just-a-string'
+        }
+
+        It 'Get-Secret: falls back to SecureString when no type tag is present' {
+            Mock Invoke-RestMethod {
+                return Get-SampleSecretResponse -Name 'legacy' -Value 'untagged'
+            } -ModuleName PSInfisical
+
+            $result = Get-Secret -Name 'legacy' -VaultName $script:vaultName -AdditionalParameters $script:vaultParams
+
+            $result | Should -BeOfType [System.Security.SecureString]
+            [System.Net.NetworkCredential]::new('', $result).Password | Should -Be 'untagged'
+        }
+
+        It 'Get-SecretInfo: reports SecretType based on the stored tag' {
+            Mock Invoke-RestMethod {
+                return @{
+                    secrets = @(
+                        @{
+                            id = 'a'; _id = 'a'; workspace = 'p'; environment = 'dev'
+                            secretKey = 'pw'; secretValue = ''; secretComment = ''
+                            secretPath = '/'; version = 1; type = 'shared'
+                            tags = @()
+                            secretMetadata = @(@{ key = 'PSInfisicalSecretType'; value = 'PSCredential' })
+                            secretReminderRepeatDays = $null; secretReminderNote = $null
+                            createdAt = '2024-01-10T08:00:00Z'; updatedAt = '2024-01-10T08:00:00Z'
+                        }
+                        @{
+                            id = 'b'; _id = 'b'; workspace = 'p'; environment = 'dev'
+                            secretKey = 'flag'; secretValue = ''; secretComment = ''
+                            secretPath = '/'; version = 1; type = 'shared'
+                            tags = @()
+                            secretMetadata = @(@{ key = 'PSInfisicalSecretType'; value = 'String' })
+                            secretReminderRepeatDays = $null; secretReminderNote = $null
+                            createdAt = '2024-01-10T08:00:00Z'; updatedAt = '2024-01-10T08:00:00Z'
+                        }
+                        @{
+                            id = 'c'; _id = 'c'; workspace = 'p'; environment = 'dev'
+                            secretKey = 'legacy'; secretValue = ''; secretComment = ''
+                            secretPath = '/'; version = 1; type = 'shared'
+                            tags = @()
+                            secretMetadata = @()
+                            secretReminderRepeatDays = $null; secretReminderNote = $null
+                            createdAt = '2024-01-10T08:00:00Z'; updatedAt = '2024-01-10T08:00:00Z'
+                        }
+                    )
+                }
+            } -ModuleName PSInfisical
+
+            $result = @(Get-SecretInfo -VaultName $script:vaultName -AdditionalParameters $script:vaultParams)
+
+            $byName = @{}
+            foreach ($info in $result) { $byName[$info.Name] = $info }
+            $byName['pw'].Type     | Should -Be ([Microsoft.PowerShell.SecretManagement.SecretType]::PSCredential)
+            $byName['flag'].Type   | Should -Be ([Microsoft.PowerShell.SecretManagement.SecretType]::String)
+            $byName['legacy'].Type | Should -Be ([Microsoft.PowerShell.SecretManagement.SecretType]::SecureString)
+        }
+    }
+
     Context 'Session Caching' {
 
         It 'Reuses cached session for same vault name' {
