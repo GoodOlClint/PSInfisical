@@ -214,12 +214,34 @@ Describe 'SecretManagement Extension Integration Tests' -Tag 'Integration' {
             }
         }
 
-        It 'Reports SecretType as SecureString' {
+        It 'Reports SecretType as String for plain-string payloads' {
+            # As of v0.5.0 the extension records the original SecretType in
+            # secret metadata so Get-Secret can rebuild the same shape. Set-Secret
+            # with a plain string is therefore tagged as String, not SecureString.
             $result = @(Get-SecretInfo -Vault $script:vaultName)
             $testInfo = $result | Where-Object { $_.Name -eq $script:listSecrets[0] }
 
             $testInfo | Should -Not -BeNullOrEmpty
-            $testInfo.Type | Should -Be ([Microsoft.PowerShell.SecretManagement.SecretType]::SecureString)
+            $testInfo.Type | Should -Be ([Microsoft.PowerShell.SecretManagement.SecretType]::String)
+        }
+
+        It 'Reports SecretType as SecureString for SecureString payloads' {
+            $secureName = "$($script:testPrefix)_SECURESTRING"
+            $secureValue = ConvertTo-SecureString -String 'covered-by-securestring-tag' -AsPlainText -Force
+            try {
+                Set-Secret -Name $secureName -Secret $secureValue -Vault $script:vaultName
+
+                $info = (Get-SecretInfo -Vault $script:vaultName) | Where-Object { $_.Name -eq $secureName }
+
+                $info | Should -Not -BeNullOrEmpty
+                $info.Type | Should -Be ([Microsoft.PowerShell.SecretManagement.SecretType]::SecureString)
+
+                $roundTrip = Get-Secret -Name $secureName -Vault $script:vaultName
+                $roundTrip | Should -BeOfType [System.Security.SecureString]
+            }
+            finally {
+                Remove-Secret -Name $secureName -Vault $script:vaultName -ErrorAction SilentlyContinue
+            }
         }
 
         It 'Reports correct VaultName' {

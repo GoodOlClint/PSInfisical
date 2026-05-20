@@ -164,6 +164,103 @@ function Get-SampleSecretsListResponse {
     }
 }
 
+# Sample API response for a single secret with arbitrary metadata pairs.
+# Used to verify SecretType round-trip handling in the extension.
+function Get-SampleTypedSecretResponse {
+    param(
+        [Parameter(Mandatory)] [string] $Name,
+        [Parameter(Mandatory)] [string] $Value,
+        [Parameter()]          [hashtable] $Metadata = @{}
+    )
+    $metadataArray = @()
+    foreach ($k in $Metadata.Keys) {
+        $metadataArray += @{ key = $k; value = [string]$Metadata[$k] }
+    }
+    return @{
+        secret = @{
+            id                        = 'sec-typed-001'
+            _id                       = 'sec-typed-001'
+            workspace                 = 'test-project-id'
+            environment               = 'dev'
+            secretKey                 = $Name
+            secretValue               = $Value
+            secretComment             = ''
+            secretPath                = '/'
+            version                   = 1
+            type                      = 'shared'
+            tags                      = @()
+            secretMetadata            = $metadataArray
+            secretReminderRepeatDays  = $null
+            secretReminderNote        = $null
+            createdAt                 = '2024-01-15T10:30:00Z'
+            updatedAt                 = '2024-01-15T10:30:00Z'
+        }
+    }
+}
+
+# Sample API response for listing secrets that live at sub-paths under a base.
+# Used to verify hierarchical -Name handling in the SecretManagement extension.
+function Get-SampleNestedSecretsListResponse {
+    return @{
+        secrets = @(
+            @{
+                id                       = 'sec-flat-001'
+                _id                      = 'sec-flat-001'
+                workspace                = 'test-project-id'
+                environment              = 'dev'
+                secretKey                = 'FLAT_KEY'
+                secretValue              = 'flat-value'
+                secretComment            = ''
+                secretPath               = '/'
+                version                  = 1
+                type                     = 'shared'
+                tags                     = @()
+                secretMetadata           = @()
+                secretReminderRepeatDays = $null
+                secretReminderNote       = $null
+                createdAt                = '2024-01-10T08:00:00Z'
+                updatedAt                = '2024-01-10T08:00:00Z'
+            },
+            @{
+                id                       = 'sec-nested-001'
+                _id                      = 'sec-nested-001'
+                workspace                = 'test-project-id'
+                environment              = 'dev'
+                secretKey                = 'winvm'
+                secretValue              = 'host-secret'
+                secretComment            = ''
+                secretPath               = '/worklab/winhost/admin'
+                version                  = 1
+                type                     = 'shared'
+                tags                     = @()
+                secretMetadata           = @()
+                secretReminderRepeatDays = $null
+                secretReminderNote       = $null
+                createdAt                = '2024-01-11T09:00:00Z'
+                updatedAt                = '2024-01-11T09:00:00Z'
+            },
+            @{
+                id                       = 'sec-nested-002'
+                _id                      = 'sec-nested-002'
+                workspace                = 'test-project-id'
+                environment              = 'dev'
+                secretKey                = 'token'
+                secretValue              = 'api-token'
+                secretComment            = ''
+                secretPath               = '/api'
+                version                  = 1
+                type                     = 'shared'
+                tags                     = @()
+                secretMetadata           = @()
+                secretReminderRepeatDays = $null
+                secretReminderNote       = $null
+                createdAt                = '2024-01-12T09:00:00Z'
+                updatedAt                = '2024-01-12T09:00:00Z'
+            }
+        )
+    }
+}
+
 # Sample API response for a single folder (as returned by /v2/folders/{id})
 function Get-SampleFolderResponse {
     param(
@@ -515,9 +612,13 @@ function Get-SampleEnvironmentResponse {
 }
 
 # Sample auth response (as returned by /v1/auth/universal-auth/login)
+# accessToken is a structurally-valid JWT with three base64url segments — header
+# ({"alg":"HS256","typ":"JWT"}), payload ({"exp":9999999999}), signature — so
+# any future tightening of session-side JWT parsing (e.g. exp-claim extraction)
+# doesn't silently break tests that flow through authentication.
 function Get-SampleAuthResponse {
     return @{
-        accessToken       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-token'
+        accessToken       = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjk5OTk5OTk5OTl9.MOCK_SIGNATURE'
         expiresIn         = 7200
         accessTokenMaxTTL = 86400
         tokenType         = 'Bearer'

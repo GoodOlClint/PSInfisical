@@ -5,6 +5,25 @@ All notable changes to PSInfisical will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-05-19
+
+### Added
+
+- SecretManagement extension now accepts hierarchical names: `Set-Secret -Name 'team/svc/db' -Secret $v` stores `db` under the `/team/svc` folder (relative to the vault's configured `SecretPath`) and idempotently creates any missing folders along the way. `Get-Secret`, `Remove-Secret`, and `Get-SecretInfo` round-trip the same slash-qualified names.
+- `Get-SecretInfo` now lists recursively so secrets stored under sub-paths are discoverable from the configured base.
+- Full `SecretType` round-trip through the extension — `String`, `SecureString`, `PSCredential`, `Hashtable` (with arbitrarily deep nesting and embedded `SecureString` values), and `ByteArray` are serialised on `Set-Secret` and reconstructed on `Get-Secret`. The original type is recorded in Infisical's secret metadata under the reserved key `PSInfisicalSecretType`; existing user metadata is preserved across updates.
+- 19 additional unit tests covering hierarchical naming, `SecretType` round-trip, nested-Hashtable symmetry, and folder-error rethrow (498 total).
+
+### Changed
+
+- SecureString plaintext extraction during `Set-Secret` payload serialisation now goes through `Unprotect-SecureString`, which zeros the unmanaged buffer via `Marshal.ZeroFreeGlobalAllocUnicode` immediately after the copy rather than waiting for `NetworkCredential`'s finalizer.
+- `Initialize-InfisicalFolderPath` only swallows "already exists" / conflict-shaped errors from `New-InfisicalFolder`; permission and network failures now surface at the folder-creation step instead of being papered over until the subsequent secret write fails.
+
+### Fixed
+
+- `ConvertTo-InfisicalSecret` now reads `secretPath` from both hashtable-shaped and `PSCustomObject`-shaped API responses (the prior `PSObject.Properties` check silently fell back to the listing path for hashtable inputs).
+- `Hashtable` payloads now round-trip symmetrically — nested JSON objects in the stored value are rebuilt as `Hashtable`s rather than left as `PSCustomObject`s.
+
 ## [0.4.1] - 2026-03-23
 
 ### Fixed

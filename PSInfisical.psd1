@@ -4,7 +4,7 @@
     RootModule        = 'PSInfisical.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.4.1'
+    ModuleVersion     = '0.5.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -113,6 +113,14 @@
             LicenseUri   = 'https://github.com/GoodOlClint/PSInfisical/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/GoodOlClint/PSInfisical'
             ReleaseNotes = @'
+## 0.5.0
+### Added
+- SecretManagement extension: hierarchical names — Set-Secret -Name "team/svc/db" stores "db" under /team/svc, creating missing folders.
+- SecretManagement extension: full SecretType round-trip (String, SecureString, PSCredential, Hashtable, ByteArray) via the reserved PSInfisicalSecretType metadata tag.
+- Get-SecretInfo now lists recursively under the configured SecretPath, returning slash-qualified names.
+### Fixed
+- ConvertTo-InfisicalSecret reads secretPath from both hashtable- and PSCustomObject-shaped API responses.
+
 ## 0.4.1
 - Metadata-only release to fix PSGallery tag indexing (redirect to 0.2.0 and tag search broken).
 
