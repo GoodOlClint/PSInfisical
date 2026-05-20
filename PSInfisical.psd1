@@ -109,10 +109,43 @@
     # Private data to pass to the module specified in RootModule
     PrivateData = @{
         PSData = @{
-            Tags         = @('Infisical', 'Secrets', 'SecretManagement', 'API', 'DevOps', 'Security')
+            Tags         = @('PSInfisical', 'Infisical', 'Secrets', 'SecretManagement', 'API', 'DevOps', 'Security')
             LicenseUri   = 'https://github.com/GoodOlClint/PSInfisical/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/GoodOlClint/PSInfisical'
-            ReleaseNotes = 'Initial release — secrets CRUD, universal auth, token auth, SecureString handling.'
+            ReleaseNotes = @'
+## 0.5.0
+### Added
+- SecretManagement extension: hierarchical names — Set-Secret -Name "team/svc/db" stores "db" under /team/svc, creating missing folders.
+- SecretManagement extension: full SecretType round-trip (String, SecureString, PSCredential, Hashtable, ByteArray) via the reserved PSInfisicalSecretType metadata tag.
+- Get-SecretInfo now lists recursively under the configured SecretPath, returning slash-qualified names.
+### Fixed
+- ConvertTo-InfisicalSecret reads secretPath from both hashtable- and PSCustomObject-shaped API responses.
+
+## 0.4.1
+- Metadata-only release to fix PSGallery tag indexing (redirect to 0.2.0 and tag search broken).
+
+## 0.4.0
+### Added
+- Email/password login: Connect-Infisical -Email -Password
+- Set-InfisicalSession: update OrganizationId, ProjectId, or Environment after connecting
+- Set-InfisicalProject: rename projects, toggle auto-capitalization
+- Get-InfisicalOrganization: list organizations accessible to current user/identity
+- OrganizationId auto-resolved from JWT during connect
+- Transparent v3 API fallback for older self-hosted Infisical instances
+- Typed response objects: InfisicalIdentityAuth, InfisicalClientSecret, InfisicalProjectMembership
+- -PassThru on Add-InfisicalIdentityAuth and Add-InfisicalProjectMember
+- 464 unit tests and 32 integration tests
+### Changed
+- -ProjectId is now optional on Connect-Infisical
+- -OrganizationId is now optional on New-InfisicalIdentity, Get-InfisicalIdentity, New-InfisicalProject
+- New-InfisicalClientSecret always returns typed object
+### Fixed
+- Always send JSON body on POST/PATCH/DELETE
+- Strict mode errors in ConvertTo-InfisicalIdentity
+- Identity list response unwrapping
+- Project response key handling (project vs workspace)
+- Token expiry extracted from JWT exp claim for email/password auth
+'@
         }
     }
 
